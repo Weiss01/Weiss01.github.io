@@ -1,1 +1,0 @@
-var DataFrame = dfjs.DataFrame;
