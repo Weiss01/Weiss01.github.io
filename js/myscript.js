@@ -223,9 +223,9 @@ function start_process(papaparse_object) { // papaparse_object -> {data: Array(4
     datumz_median = cal_datumz_median(cleaned_df);
     cleaned_df = cleaned_df.withColumn('Datum Z Median', useless);
     console.log("Generating Datum Z Norm");
-    cleaned_df = cleaned_df.withColumn('Datum Norm', (row) => row.get('Datum Z [mm]') - row.get('Datum Z Median'));
+    cleaned_df = cleaned_df.withColumn('Datum Norm', datum_norm_func);
     console.log("Generating Rad Offset");
-    cleaned_df = cleaned_df.withColumn('Rad Offset', (row) => Math.pow((Math.pow(row.get('Offset X [mm]'), 2) + Math.pow(row.get('Offset Y [mm]'), 2)), 0.5));
+    cleaned_df = cleaned_df.withColumn('Rad Offset', rad_offset_func);
 
     console.log("File Succesfully Proccessed!");
 }
