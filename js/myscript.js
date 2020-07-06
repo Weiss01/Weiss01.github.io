@@ -5,6 +5,8 @@ var my_file;
 var file_content;
 var results;
 var my_df;
+var lastk_df;
+var cleaned_df;
 
 function exists(id) {
     var temp = document.getElementById(id);
@@ -129,32 +131,50 @@ function alert_complete() {
 }
 
 
-function getInputs() {
-    input = [];
+function get_remove_n() {
+    var res = 0;
     if ($("#input_box1").val() === ""){
-        input[0] = 7;
+        res = 7;
     }else{
-        input[0] = Number($("#input_box1").val());
+        res = Number($("#input_box1").val());
     }
+    return res;
+}
 
+function get_lastk_n() {
+    var res = 0;
     if ($("#input_box2").val() === ""){
-        input[1] = 10;
+        res = 10;
     }else{
-        input[1] = Number($("#input_box2").val());
+        res = Number($("#input_box2").val());
     }
+    return res;
+}
 
-    if ($("#input_box3").val() === ""){
-        input[2] = 0;
-    }else{
-        input[2] = Number($("#input_box3").val());
-    }
-    return input;
+function last_k(df, n) {
+    lst = df.unique("Reproducibility Run").toArray();
+    // if (n > lst.length) {
+    //     // error message
+    // }
+    console.log(lst[lst.length - n][0]);
+    return df.filter(row => row.get('Reproducibility Run') >= Number(lst[lst.length - n][0]));
+}
+
+function filter_meas_state(df) {
+    return df.filter(row => row.get('Meas State') == 10 || row.get('Meas State') == 30);
 }
 
 function start_process(papaparse_object) { // papaparse_object -> {data: Array(4), errors: Array(1), meta: {…}}
-    input = getInputs();
-    data_rows = papaparse_object.data.slice(input[0] + 1,-1);
-    data_header = results.data[input[0]];
+    var remove_n = get_remove_n();
+    data_rows = papaparse_object.data.slice(remove_n + 1,-1);
+    data_header = results.data[remove_n];
     my_df = new DataFrame(data_rows, data_header); // df = new DataFrame(results["data"].slice(1,-1), results["data"][0])
-    my_df.show();
+
+    lastk_n = get_lastk_n();
+    lastk_df = last_k(my_df, lastk_n);
+
+    cleaned_df = filter_meas_state(lastk_df);
+
+
+    // cleaned_df.show();
 }
