@@ -156,7 +156,6 @@ function last_k(df, n) {
     // if (n > lst.length) {
     //     // error message
     // }
-    console.log(lst[lst.length - n][0]);
     return df.filter(row => row.get('Reproducibility Run') >= Number(lst[lst.length - n][0]));
 }
 
@@ -175,6 +174,6 @@ function start_process(papaparse_object) { // papaparse_object -> {data: Array(4
 
     cleaned_df = filter_meas_state(lastk_df);
 
-
     // cleaned_df.show();
+    console.log("File Successfully Processed!");
 }
