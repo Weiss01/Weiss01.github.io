@@ -7,6 +7,9 @@ var results;
 var my_df;
 var lastk_df;
 var cleaned_df;
+var median_df;
+var datumz_median;
+var useless_var = 0;
 
 function exists(id) {
     var temp = document.getElementById(id);
@@ -16,7 +19,7 @@ function exists(id) {
     return true;
     }
 }
-asdbasbdas
+
 fileSelector.change(function (event) {
     if (exists("input_group")){
         $("#input_group").remove();
@@ -163,15 +166,36 @@ function filter_meas_state(df) {
     return df.filter(row => row.get('Meas State') == 10 || row.get('Meas State') == 30);
 }
 
-function datumz_median(df) {
+function median(arr) {
+    const mid = Math.floor(arr.length / 2);
+    const nums = arr.sort();
+    return arr.length % 2 !== 0 ? Number(nums[mid]) : (Number(nums[mid - 1]) + Number(nums[mid])) / 2;
+}
+
+function cal_datumz_median(df) {
+    console.log("Calculating Median...");
     var group_collection = cleaned_df.groupBy('Reproducibility Run').toCollection();
     var temp_col;
     var merged;
+    var res_row = [];
+    var shell_list;
+    var temp_median;
     for (var i = 0; i < group_collection.length; i++) {
+        console.log("Calculating Median for group " + (i+1) + "...");
         temp_col = group_collection[i]['group'].select('Datum Z [mm]').toArray();
         merged = [].concat.apply([], temp_col);
-        merged.sort();
+        shell_list = new Array(temp_col.length);
+        temp_median = median(merged);
+        shell_list.fill(temp_median);
+        res_row = res_row.concat(shell_list);
     }
+    return res_row;
+}
+
+function useless() {
+    var res = useless_var;
+    useless_var = useless_var + 1;
+    return datumz_median[res];
 }
 
 function start_process(papaparse_object) { // papaparse_object -> {data: Array(4), errors: Array(1), meta: {…}}
@@ -184,6 +208,8 @@ function start_process(papaparse_object) { // papaparse_object -> {data: Array(4
     lastk_df = last_k(my_df, lastk_n);
 
     cleaned_df = filter_meas_state(lastk_df);
-    datumz_median(cleaned_df);
-    // cleaned_df.show();
+    datumz_median = cal_datumz_median(cleaned_df);
+    cleaned_df = cleaned_df.withColumn('Datum Z Median', useless);
+
+    console.log("File Succesfully Proccessed!");
 }
