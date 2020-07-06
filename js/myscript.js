@@ -16,7 +16,7 @@ function exists(id) {
     return true;
     }
 }
-
+asdbasbdas
 fileSelector.change(function (event) {
     if (exists("input_group")){
         $("#input_group").remove();
@@ -163,6 +163,17 @@ function filter_meas_state(df) {
     return df.filter(row => row.get('Meas State') == 10 || row.get('Meas State') == 30);
 }
 
+function datumz_median(df) {
+    var group_collection = cleaned_df.groupBy('Reproducibility Run').toCollection();
+    var temp_col;
+    var merged;
+    for (var i = 0; i < group_collection.length; i++) {
+        temp_col = group_collection[i]['group'].select('Datum Z [mm]').toArray();
+        merged = [].concat.apply([], temp_col);
+        merged.sort();
+    }
+}
+
 function start_process(papaparse_object) { // papaparse_object -> {data: Array(4), errors: Array(1), meta: {…}}
     var remove_n = get_remove_n();
     data_rows = papaparse_object.data.slice(remove_n + 1,-1);
@@ -173,7 +184,6 @@ function start_process(papaparse_object) { // papaparse_object -> {data: Array(4
     lastk_df = last_k(my_df, lastk_n);
 
     cleaned_df = filter_meas_state(lastk_df);
-
+    datumz_median(cleaned_df);
     // cleaned_df.show();
-    console.log("File Successfully Processed!");
 }
