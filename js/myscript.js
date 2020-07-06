@@ -9,7 +9,7 @@ var lastk_df;
 var cleaned_df;
 var median_df;
 var datumz_median;
-var useless_var = 0;
+var counter = 0;
 
 function exists(id) {
     var temp = document.getElementById(id);
@@ -21,8 +21,11 @@ function exists(id) {
 }
 
 fileSelector.change(function (event) {
-    if (exists("input_group")){
+    if (exists("input_group")) {
         $("#input_group").remove();
+    }
+    if (exists("progress_div")) {
+        $("#progress_div").remove();
     }
     const fileList = event.target.files;
     file_list = fileList;
@@ -124,8 +127,20 @@ function add_input_group() {
 
     process_button.click(function () {
         console.log("Processing....");
-        start_process(results);
+        if (!exists('progress_div')){
+            add_progress_bar();
+        }
+        setTimeout(() => { start_process(results); }, 3000);
     })
+}
+
+function add_progress_bar() {
+    var progress_div = document.createElement('div');
+    progress_div.setAttribute('class', 'alert alert-info myprogress');
+    progress_div.setAttribute('id', 'progress_div');
+    progress_div.setAttribute('role', 'alert');
+    $('.main').append(progress_div);
+    $('#progress_div').text('Processing...');
 }
 
 function alert_complete() {
@@ -192,9 +207,9 @@ function cal_datumz_median(df) {
     return res_row;
 }
 
-function useless() {
-    var res = useless_var;
-    useless_var = useless_var + 1;
+function datum_median_func() {
+    var res = counter;
+    counter = counter + 1;
     return datumz_median[res];
 }
 
@@ -214,18 +229,18 @@ function start_process(papaparse_object) { // papaparse_object -> {data: Array(4
     var remove_n = get_remove_n();
     data_rows = papaparse_object.data.slice(remove_n + 1,-1);
     data_header = results.data[remove_n];
-    my_df = new DataFrame(data_rows, data_header); // df = new DataFrame(results["data"].slice(1,-1), results["data"][0])
-
+    my_df = new DataFrame(data_rows, data_header);
     lastk_n = get_lastk_n();
     lastk_df = last_k(my_df, lastk_n);
-
     cleaned_df = filter_meas_state(lastk_df);
     datumz_median = cal_datumz_median(cleaned_df);
-    cleaned_df = cleaned_df.withColumn('Datum Z Median', useless);
-    console.log("Generating Datum Z Norm");
+    console.log("Generating Datum Z Median...");
+    cleaned_df = cleaned_df.withColumn('Datum Z Median', datum_median_func);
+    counter = 0;
+    console.log("Generating Datum Z Norm...");
     cleaned_df = cleaned_df.withColumn('Datum Norm', datum_norm_func);
-    console.log("Generating Rad Offset");
+    console.log("Generating Rad Offset...");
     cleaned_df = cleaned_df.withColumn('Rad Offset', rad_offset_func);
-
     console.log("File Succesfully Proccessed!");
+    $('#progress_div').text("File Succesfully Proccessed!");
 }
