@@ -3,14 +3,21 @@ var file_list;
 var file_content;
 var results;
 var my_df;
+var my_df2;
 var counter = 0;
 var datumzMedianCol;
+var datumzMedianCol2;
 var pxsd;
 var pysd;
 var dnsd;
 var rosd;
+var sxsd;
+var sysd;
+var prsd;
 var sd_df;
+var sd_df2;
 var pt;
+var pt2;
 
 function exists(id) {
     if (document.getElementById(id) === null){
@@ -141,6 +148,9 @@ function filterNewestRun(df, n) {
 function filtermeasState(df) {
     return df.filter(row => row.get('Meas State') == 10 || row.get('Meas State') == 30);
 }
+function filtermeasState2(df) {
+    return df.filter(row => row.get('Meas State') == 10);
+}
 function median(arr) {
     const mid = Math.floor(arr.length / 2);
     const nums = arr.sort();
@@ -205,30 +215,41 @@ function getSd(df) {
     rosd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Rad Offset')).rename('aggregation', 'Rad Offset Standard Deviation');
     var d = getMean(rosd, 'Rad Offset Standard Deviation');
     var resDf = new DataFrame([[a, b, c, d]], ['Offset X Standard Deviation', 'Offset Y Standard Deviation', 'Datum Norm Standard Deviation', 'Rad Offset Standard Deviation']);
-    pxsd.show();
-    pysd.show();
-    dnsd.show();
-    rosd.show();
     return resDf;
 }
-function getPtXy(mean) {
-    return mean * 6 / 0.028;
+function getSd2(df){
+    sxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size X [mm]')).rename('aggregation', 'Size X Standard Deviation');
+    var a = getMean(sxsd, 'Size X Standard Deviation');
+    sysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size Y [mm]')).rename('aggregation', 'Size Y Standard Deviation');
+    var b = getMean(sysd, 'Size Y Standard Deviation');
+    prsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Pos R [deg]')).rename('aggregation', 'Pos R Standard Deviation');
+    var c = getMean(prsd, 'Pos R Standard Deviation');
+    var resDf = new DataFrame([[a, b, c]], ['Size X Standard Deviation', 'Size Y Standard Deviation', 'Pos R Standard Deviation']);
+    return resDf;
 }
-function getPtZNorm(mean) {
-    return mean * 6 / 0.035;
-}
-function getPtRadOffset(mean) {
-    return mean * 6 / 0.02;
+function getPtNum(mean, constant){
+    return mean * 6 / constant;
 }
 function getPt(meanArr) {
     var res = [];
     for (var i = 0; i < 4; i++){
         if (i === 0 || i === 1){
-            res[i] = getPtXy(meanArr[i]);
+            res[i] = getPtNum(meanArr[i], 0.028);
         }else if (i === 2){
-            res[i] = getPtZNorm(meanArr[i]);
+            res[i] = getPtNum(meanArr[i], 0.035);
         }else if (i === 3){
-            res[i] = getPtRadOffset(meanArr[i]);
+            res[i] = getPtNum(meanArr[i], 0.02);
+        }
+    }
+    return res;
+}
+function getPt2(meanArr){
+    var res = [];
+    for (var i = 0; i < 3; i++){
+        if (i === 0 || i === 1){
+            res[i] = getPtNum(meanArr[i], 0.008);
+        }else if (i === 2){
+            res[i] = getPtNum(meanArr[i], 9);
         }
     }
     return res;
@@ -261,15 +282,22 @@ function getRerun(arr){
         }
     });
 }
-function getStatus(ptResult) {
+function getStatus(ptResult1, ptResult2) {
     var fail = [];
     var rerun = [];
     var success = [];
     for (var i = 0; i < 4; i++) {
-        if (ptResult[i] > 0.3){
+        if (ptResult1[i] >= 0.3){
             fail.push(i);
-        }else if (ptResult[i] > 0.15){
+        }else if (ptResult1[i] >= 0.15){
             rerun.push(i);
+        }else{
+            success.push(i);
+        }
+    }
+    for (var i = 0; i < 3; i++) {
+        if (ptResult2[i] >= 0.3){
+            fail.push(i);
         }else{
             success.push(i);
         }
@@ -290,8 +318,10 @@ function driver() {
     my_df = filterNewestRun(my_df, getInput2()); // filter last 10 Reproducibility Run 10
 
     my_df = filtermeasState(my_df); // filter out 0s and blanks 15
+    my_df2 = filtermeasState2(my_df);
 
     datumzMedianCol = getMedianCol(my_df); // get collumn for Median 30
+    datumzMedianCol2 = getMedianCol(my_df2);
 
     my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median 50
 
@@ -300,8 +330,10 @@ function driver() {
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
 
     sd_df = getSd(my_df);
+    sd_df2 = getSd2(df2);
 
     pt = getPt(sd_df.toArray()[0]);
+    pt2 = getPt2(sd_df2.toArray()[0]);
 
-    getStatus(pt);
+    getStatus(pt, pt2);
 }
