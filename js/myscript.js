@@ -18,13 +18,50 @@ var sd_df;
 var sd_df2;
 var pt;
 var pt2;
-
+var status;
+function cleanup() {
+    if (exists("progress_div")) {
+        $("#progress_div").remove();
+    }
+    if (exists("results_div")) {
+        $("#results_div").remove();
+    }
+    if (exists("status_bar")) {
+        $("#status_bar").remove();
+    }
+    if (exists("status_bp")) {
+        $("#status_bp").remove();
+    }
+    if (exists("alert-bar")){
+        $('#alert-bar').remove();
+    }
+    if (exists("results_div")){
+        $('#results_div').remove();
+    }
+    if (exists("alert_bp")){
+        $('#alert_bp').remove();
+    }
+}
 function exists(id) {
     if (document.getElementById(id) === null){
         return false;
     }
     return true;
 }
+const link1 = $('#link1');
+link1.click(function (event) {
+    $('.display-4').text("OA Reproducibility Data Analysis");
+    cleanup();
+    document.getElementById("inputFile").value = "";
+    $(".custom-file-label").text("Choose file");
+})
+const link2 = $('#link2');
+link2.click(function (event) {
+    $('.display-4').text("OA Repeatability Data Analysis");
+    cleanup();
+    document.getElementById("inputFile").value = "";
+    $(".custom-file-label").text("Choose file");
+})
 const fileSelector = $('#inputFile');
 fileSelector.change(function (event) {
     if (exists("input_group")) {
@@ -32,6 +69,15 @@ fileSelector.change(function (event) {
     }
     if (exists("progress_div")) {
         $("#progress_div").remove();
+    }
+    if (exists("results_div")) {
+        $("#results_div").remove();
+    }
+    if (exists("status_bar")) {
+        $("#status_bar").remove();
+    }
+    if (exists("status_bp")) {
+        $("#status_bp").remove();
     }
     file_list = event.target.files;
     $(".custom-file-label").text(file_list[0].name);
@@ -48,6 +94,7 @@ fileSelector.change(function (event) {
 function add_alert() {
     var alert = document.createElement("div");
     var breakpoint = document.createElement("br");
+    breakpoint.setAttribute('id', 'alert_bp');
     alert.setAttribute('id', 'alert-bar');
     alert.setAttribute('class', 'alert alert-primary');
     alert.setAttribute('role', 'alert');
@@ -103,7 +150,12 @@ function add_input_group() {
     process_button = $('#process');
     process_button.click(function () {
         console.log("Processing....");
-        driver();
+        add_progress_bar();
+        if ($('.display-4').text() === "OA Reproducibility Data Analysis"){
+            setTimeout(() => { oa1(); }, 1000);
+        } else if ($('.display-4').text() === "OA Repeatability Data Analysis") {
+            setTimeout(() => { oa2(); }, 1000);
+        }
     })
 }
 function alert_complete() {
@@ -141,9 +193,9 @@ function getDf(parsed_object, input1) {
     df = new DataFrame(data_rows, data_header);
     return df;
 }
-function filterNewestRun(df, n) {
-    lst = df.unique("Reproducibility Run").toArray();
-    return df.filter(row => row.get('Reproducibility Run') >= Number(lst[lst.length - n][0]));
+function filterNewestRun(df, n, col) {
+    lst = df.unique(col).toArray();
+    return df.filter(row => row.get(col) >= Number(lst[lst.length - n][0]));
 }
 function filtermeasState(df) {
     return df.filter(row => row.get('Meas State') == 10 || row.get('Meas State') == 30);
@@ -163,9 +215,9 @@ function calGroupMedian(groupCollection, groupNumber) {
     shell_list.fill(median(col));
     return shell_list;
 }
-function getMedianCol(df) {
+function getMedianCol(df, col) {
     var res_row = [];
-    var collection = df.groupBy('Reproducibility Run').toCollection();
+    var collection = df.groupBy(col).toCollection();
     for (var i = 0; i < collection.length; i++) {
         console.log("Calculating Median for group " + (i+1) + "...");
         res_row = res_row.concat(calGroupMedian(collection, i));
@@ -303,25 +355,84 @@ function getStatus(ptResult1, ptResult2) {
         }
     }
     if (fail.length > 0){
+        status = "Fail";
         console.log("FAIL");
         getFailed(fail);
     } else if (rerun.length > 0) {
+        status = "RUN REPEATABILITY AGAIN";
         console.log("RUN REPEATABILITY AGAIN");
         getRerun(rerun);
     } else {
+        status = "PASS";
         console.log("PASS");
     }
 }
-function driver() {
+function showResult() {
+    $("#input_group").remove();
+    $('#alert-bar').text("Finished Processing " + file_list[0].name);
+    var results_div = document.createElement('div');
+    results_div.setAttribute('class', 'container results');
+    results_div.setAttribute('id', 'results_div');
+    var table = document.createElement('table');
+    table.setAttribute('class', 'table table-hover table-dark');
+    var table_head = document.createElement('thead');
+    table_head.setAttribute('id','table_head');
+    var table_body = document.createElement('tbody');
+    table_body.setAttribute('id', 'table_body');
+    var head_row = document.createElement('tr');
+    head_row.setAttribute('id', 'head_row');
+    var body_row = document.createElement('tr');
+    body_row.setAttribute('id', 'body_row');
+    $('.jumbotron').append(results_div);
+    $('.results').append(table);
+    $('.table').append(table_head);
+    $('.table').append(table_body);
+    $('#table_head').append(head_row);
+    addHeader("Offset X (P/T)");
+    addHeader("Offset Y (P/T)");
+    addHeader("Datum Norm (P/T)");
+    addHeader("Rad Offset (P/T)");
+    addHeader("Size X (P/T)");
+    addHeader("Size Y (P/T)");
+    addHeader("Pos R (P/T)");
+    $('#table_body').append(body_row);
+    addItem(pt[0]);
+    addItem(pt[1]);
+    addItem(pt[2]);
+    addItem(pt[3]);
+    addItem(pt2[0]);
+    addItem(pt2[1]);
+    addItem(pt2[2]);
+    var bp = document.createElement('br');
+    bp.setAttribute("id", "status_bp");
+    var status_bar = document.createElement('div');
+    status_bar.setAttribute('class', 'alert alert-info status');
+    status_bar.setAttribute('id', 'status_bar');
+    status_bar.setAttribute('role', 'alert');
+    $('.results').append(bp);
+    $('.results').append(status_bar);
+    $('#status_bar').html("<strong>" + status + "</strong>");
+}
+function addHeader(content) {
+    var head_item = document.createElement('th');
+    head_item.setAttribute('scope', 'col');
+    head_item.innerHTML = content;
+    $('#head_row').append(head_item);
+}
+function addItem(content) {
+    var body_item = document.createElement('th');
+    body_item.innerHTML = Number.parseFloat(content).toFixed(10);
+    $('#body_row').append(body_item);
+}
+function oa1() {
     my_df = getDf(results, getInput1()); // create DataFrame 5
 
-    my_df = filterNewestRun(my_df, getInput2()); // filter last 10 Reproducibility Run 10
+    my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run 10
 
     my_df = filtermeasState(my_df); // filter out 0s and blanks 15
     my_df2 = filtermeasState2(my_df);
 
-    datumzMedianCol = getMedianCol(my_df); // get collumn for Median 30
-    datumzMedianCol2 = getMedianCol(my_df2);
+    datumzMedianCol = getMedianCol(my_df, 'Reproducibility Run'); // get collumn for Median 30
 
     my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median 50
 
@@ -336,4 +447,36 @@ function driver() {
     pt2 = getPt2(sd_df2.toArray()[0]);
 
     getStatus(pt, pt2);
+
+    $('#progress_div').remove();
+
+    showResult();
+}
+function oa2() {
+    my_df = getDf(results, getInput1()); // create DataFrame
+
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability Run'); // filter last 10 Reproducibility Run
+
+    my_df = filtermeasState(my_df); // filter out 0s and blanks
+    my_df2 = filtermeasState2(my_df);
+
+    datumzMedianCol = getMedianCol(my_df, 'Repeatability Run'); // get collumn for Median
+
+    my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median
+
+    my_df = my_df.withColumn('Datum Norm', datumNormFunc); // Generate new Collumn for Norm
+
+    my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset
+
+    sd_df = getSd(my_df);
+    sd_df2 = getSd2(my_df2);
+
+    pt = getPt(sd_df.toArray()[0]);
+    pt2 = getPt2(sd_df2.toArray()[0]);
+
+    getStatus(pt, pt2);
+
+    $('#progress_div').remove();
+
+    showResult();
 }

@@ -9,3 +9,19 @@
     height: 80px;
     width: 50%;
 }
+
+th{
+    font-size: medium;
+}
+
+.results{
+    margin: 0 auto;
+}
+
+.status{
+    margin: 0 auto;
+    padding: 25px;
+    text-align: center;
+    height: 80px;
+    width: 20%;
+}
