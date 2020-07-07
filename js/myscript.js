@@ -1,25 +1,18 @@
 var DataFrame = dfjs.DataFrame;
-const fileSelector = $('#inputFile');
 var file_list;
-var my_file;
 var file_content;
 var results;
 var my_df;
-var lastk_df;
-var cleaned_df;
-var median_df;
-var datumz_median;
 var counter = 0;
+var datumzMedianCol;
 
 function exists(id) {
-    var temp = document.getElementById(id);
-    if (temp === null){
-    return false;
-    } else {
-    return true;
+    if (document.getElementById(id) === null){
+        return false;
     }
+    return true;
 }
-
+const fileSelector = $('#inputFile');
 fileSelector.change(function (event) {
     if (exists("input_group")) {
         $("#input_group").remove();
@@ -27,9 +20,7 @@ fileSelector.change(function (event) {
     if (exists("progress_div")) {
         $("#progress_div").remove();
     }
-    const fileList = event.target.files;
-    file_list = fileList;
-    my_file = file_list[0];
+    file_list = event.target.files;
     $(".custom-file-label").text(file_list[0].name);
     if (!exists("alert-bar")){
         add_alert();
@@ -41,7 +32,6 @@ fileSelector.change(function (event) {
         addParseOptions();
     }
 })
-
 function add_alert() {
     var alert = document.createElement("div");
     var breakpoint = document.createElement("br");
@@ -51,8 +41,6 @@ function add_alert() {
     $('.jumbotron').append(breakpoint);
     $('.jumbotron').append(alert);
 }
-
-
 function addParseOptions() {
     var button = document.createElement("button");
     button.setAttribute('id', 'parse');
@@ -61,35 +49,11 @@ function addParseOptions() {
     $('.jumbotron').append(button);
     $('#parse').html("Parse");
     parse_button = $("#parse");
-
     parse_button.click(function () {
         console.log("Parsing....");
         readFileAsString(file_list);
     })
 }
-
-function readFileAsString(files) {
-    if (files.length === 0) {
-        console.log('No file is selected');
-        return;
-    }
-    var reader = new FileReader();
-    reader.onload = function(event) {
-        file_content = event.target.result;
-        results = Papa.parse(file_content);
-        console.log("Finished Parsing");
-        if (results["data"].length <= 15){
-            console.log("Parsed result:\n" + results["data"]);
-        } else {
-            console.log("Results too long to be logged");
-        }
-        $('#parse').remove();
-        add_input_group();
-        alert_complete();
-    };
-    reader.readAsText(files[0]);
-}
-
 function add_input_group() {
     var input_group = document.createElement("div");
     input_group.setAttribute('id', 'input_group');
@@ -124,16 +88,15 @@ function add_input_group() {
     $('#input_group').append(button);
     $('#process').html("Process!");
     process_button = $('#process');
-
     process_button.click(function () {
         console.log("Processing....");
-        if (!exists('progress_div')){
-            add_progress_bar();
-        }
-        setTimeout(() => { start_process(results); }, 3000);
+        driver();
     })
 }
-
+function alert_complete() {
+    $('#alert-bar').attr("class", "alert alert-success");
+    $('#alert-bar').text("Finished Parsing " + file_list[0].name);
+}
 function add_progress_bar() {
     var progress_div = document.createElement('div');
     progress_div.setAttribute('class', 'alert alert-info myprogress');
@@ -142,105 +105,98 @@ function add_progress_bar() {
     $('.main').append(progress_div);
     $('#progress_div').text('Processing...');
 }
-
-function alert_complete() {
-    $('#alert-bar').attr("class", "alert alert-success");
-    $('#alert-bar').text("Finished Parsing " + file_list[0].name);
+function readFileAsString(files) {
+    var reader = new FileReader();
+    reader.onload = function(event) {
+        file_content = event.target.result;
+        results = Papa.parse(file_content);
+        console.log("Finished Parsing");
+        if (results["data"].length <= 15){
+            console.log("Parsed result:\n" + results["data"]);
+        } else {
+            console.log("Results too long to be logged");
+        }
+        $('#parse').remove();
+        add_input_group();
+        alert_complete();
+    };
+    reader.readAsText(files[0]);
 }
-
-
-function get_remove_n() {
-    var res = 0;
-    if ($("#input_box1").val() === ""){
-        res = 7;
-    }else{
-        res = Number($("#input_box1").val());
-    }
-    return res;
+function getDf(parsed_object, input1) {
+    data_rows = parsed_object.data.slice(input1 + 1,-1);
+    data_header = parsed_object.data[input1];
+    df = new DataFrame(data_rows, data_header);
+    return df;
 }
-
-function get_lastk_n() {
-    var res = 0;
-    if ($("#input_box2").val() === ""){
-        res = 10;
-    }else{
-        res = Number($("#input_box2").val());
-    }
-    return res;
-}
-
-function last_k(df, n) {
+function filterNewestRun(df, n) {
     lst = df.unique("Reproducibility Run").toArray();
-    // if (n > lst.length) {
-    //     // error message
-    // }
     return df.filter(row => row.get('Reproducibility Run') >= Number(lst[lst.length - n][0]));
 }
-
-function filter_meas_state(df) {
+function filtermeasState(df) {
     return df.filter(row => row.get('Meas State') == 10 || row.get('Meas State') == 30);
 }
-
 function median(arr) {
     const mid = Math.floor(arr.length / 2);
     const nums = arr.sort();
     return arr.length % 2 !== 0 ? Number(nums[mid]) : (Number(nums[mid - 1]) + Number(nums[mid])) / 2;
 }
-
-function cal_datumz_median(df) {
-    console.log("Calculating Median...");
-    var group_collection = cleaned_df.groupBy('Reproducibility Run').toCollection();
-    var temp_col;
-    var merged;
+function calGroupMedian(groupCollection, groupNumber) {
+    var col = groupCollection[groupNumber]['group'].select('Datum Z [mm]').toArray();
+    col = [].concat.apply([], col);
+    var shell_list = new Array(col.length);
+    shell_list.fill(median(col));
+    return shell_list;
+}
+function getMedianCol(df) {
     var res_row = [];
-    var shell_list;
-    var temp_median;
-    for (var i = 0; i < group_collection.length; i++) {
+    var collection = df.groupBy('Reproducibility Run').toCollection();
+    for (var i = 0; i < collection.length; i++) {
         console.log("Calculating Median for group " + (i+1) + "...");
-        temp_col = group_collection[i]['group'].select('Datum Z [mm]').toArray();
-        merged = [].concat.apply([], temp_col);
-        shell_list = new Array(temp_col.length);
-        temp_median = median(merged);
-        shell_list.fill(temp_median);
-        res_row = res_row.concat(shell_list);
+        res_row = res_row.concat(calGroupMedian(collection, i));
     }
     return res_row;
 }
-
-function datum_median_func() {
+function datumMedianHelper() {
     var res = counter;
     counter = counter + 1;
-    return datumz_median[res];
+    return datumzMedianCol[res];
 }
-
-function datum_norm_func(row) {
+function datumNormFunc(row) {
     const a = new BigNumber(row.get('Datum Z [mm]'));
     const b = new BigNumber(row.get('Datum Z Median'));
     return a.minus(b).toFixed();
 }
-
-function rad_offset_func(row) {
+function radOffsetHelper(row) {
     const a = new BigNumber(row.get('Offset X [mm]'));
     const b = new BigNumber(row.get('Offset Y [mm]'));
     return a.pow(2).plus(b.pow(2)).squareRoot().toFixed();
 }
+function getInput1() {
+    var res = 0;
+    if ($("#input_box1").val() === ""){
+        res = 7;
+    }else{ res = Number($("#input_box1").val()); }
+    return res;
+}
+function getInput2() {
+    var res = 0;
+    if ($("#input_box2").val() === ""){
+        res = 10;
+    }else{ res = Number($("#input_box2").val()); }
+    return res;
+}
+function driver() {
+    my_df = getDf(results, getInput1()); // create DataFrame 5
 
-function start_process(papaparse_object) { // papaparse_object -> {data: Array(4), errors: Array(1), meta: {…}}
-    var remove_n = get_remove_n();
-    data_rows = papaparse_object.data.slice(remove_n + 1,-1);
-    data_header = results.data[remove_n];
-    my_df = new DataFrame(data_rows, data_header);
-    lastk_n = get_lastk_n();
-    lastk_df = last_k(my_df, lastk_n);
-    cleaned_df = filter_meas_state(lastk_df);
-    datumz_median = cal_datumz_median(cleaned_df);
-    console.log("Generating Datum Z Median...");
-    cleaned_df = cleaned_df.withColumn('Datum Z Median', datum_median_func);
-    counter = 0;
-    console.log("Generating Datum Z Norm...");
-    cleaned_df = cleaned_df.withColumn('Datum Norm', datum_norm_func);
-    console.log("Generating Rad Offset...");
-    cleaned_df = cleaned_df.withColumn('Rad Offset', rad_offset_func);
-    console.log("File Succesfully Proccessed!");
-    $('#progress_div').text("File Succesfully Proccessed!");
+    my_df = filterNewestRun(my_df, getInput2()); // filter last 10 Reproducibility Run 10
+
+    my_df = filtermeasState(my_df); // filter out 0s and blanks 15
+
+    datumzMedianCol = getMedianCol(my_df); // get collumn for Median 30
+
+    my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median 50
+
+    my_df = my_df.withColumn('Datum Norm', datumNormFunc); // Generate new Collumn for Norm 70
+
+    my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
 }
