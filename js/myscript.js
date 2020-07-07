@@ -205,7 +205,7 @@ function getMean(groupData, header){
     var sdDf = new DataFrame(groupData.toCollection(), ['Probe ID', header]);
     return sdDf.stat.mean(header);
 }
-function getSd(df) {
+function getSd(df) { // count EP : D
     pxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset X [mm]')).rename('aggregation', 'Offset X Standard Deviation');
     var a = getMean(pxsd, 'Offset X Standard Deviation');
     pysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset Y [mm]')).rename('aggregation', 'Offset Y Standard Deviation');
@@ -330,7 +330,7 @@ function driver() {
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
 
     sd_df = getSd(my_df);
-    sd_df2 = getSd2(df2);
+    sd_df2 = getSd2(my_df2);
 
     pt = getPt(sd_df.toArray()[0]);
     pt2 = getPt2(sd_df2.toArray()[0]);
