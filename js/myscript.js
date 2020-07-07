@@ -5,6 +5,12 @@ var results;
 var my_df;
 var counter = 0;
 var datumzMedianCol;
+var pxsd;
+var pysd;
+var dnsd;
+var rosd;
+var sd_df;
+var pt;
 
 function exists(id) {
     if (document.getElementById(id) === null){
@@ -185,6 +191,99 @@ function getInput2() {
     }else{ res = Number($("#input_box2").val()); }
     return res;
 }
+function getMean(groupData, header){
+    var sdDf = new DataFrame(groupData.toCollection(), ['Probe ID', header]);
+    return sdDf.stat.mean(header);
+}
+function getSd(df) {
+    pxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset X [mm]')).rename('aggregation', 'Offset X Standard Deviation');
+    var a = getMean(pxsd, 'Offset X Standard Deviation');
+    pysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset Y [mm]')).rename('aggregation', 'Offset Y Standard Deviation');
+    var b = getMean(pysd, 'Offset Y Standard Deviation');
+    dnsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Datum Norm')).rename('aggregation', 'Datum Norm Standard Deviation');
+    var c = getMean(dnsd, 'Datum Norm Standard Deviation');
+    rosd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Rad Offset')).rename('aggregation', 'Rad Offset Standard Deviation');
+    var d = getMean(rosd, 'Rad Offset Standard Deviation');
+    var resDf = new DataFrame([[a, b, c, d]], ['Offset X Standard Deviation', 'Offset Y Standard Deviation', 'Datum Norm Standard Deviation', 'Rad Offset Standard Deviation']);
+    pxsd.show();
+    pysd.show();
+    dnsd.show();
+    rosd.show();
+    return resDf;
+}
+function getPtXy(mean) {
+    return mean * 6 / 0.028;
+}
+function getPtZNorm(mean) {
+    return mean * 6 / 0.035;
+}
+function getPtRadOffset(mean) {
+    return mean * 6 / 0.02;
+}
+function getPt(meanArr) {
+    var res = [];
+    for (var i = 0; i < 4; i++){
+        if (i === 0 || i === 1){
+            res[i] = getPtXy(meanArr[i]);
+        }else if (i === 2){
+            res[i] = getPtZNorm(meanArr[i]);
+        }else if (i === 3){
+            res[i] = getPtRadOffset(meanArr[i]);
+        }
+    }
+    return res;
+}
+function getFailed(arr){
+    console.log("The following items failed: ")
+    forEach((item, i) => {
+        if (item === 0){
+            console.log("Offset X");
+        }else if (item === 1){
+            console.log("Offset Y");
+        }else if (item === 2){
+            console.log("Datum Norm");
+        }else{
+            console.log("Rad Offset");
+        }
+    });
+}
+function getRerun(arr){
+    console.log("The following items needs rerun: ")
+    forEach((item, i) => {
+        if (item === 0){
+            console.log("Offset X");
+        }else if (item === 1){
+            console.log("Offset Y");
+        }else if (item === 2){
+            console.log("Datum Norm");
+        }else{
+            console.log("Rad Offset");
+        }
+    });
+}
+function getStatus(ptResult) {
+    var fail = [];
+    var rerun = [];
+    var success = [];
+    for (var i = 0; i < 4; i++) {
+        if (ptResult[i] > 0.3){
+            fail.push(i);
+        }else if (ptResult[i] > 0.15){
+            rerun.push(i);
+        }else{
+            success.push(i);
+        }
+    }
+    if (fail.length > 0){
+        console.log("FAIL");
+        getFailed(fail);
+    } else if (rerun.length > 0) {
+        console.log("RUN REPEATABILITY AGAIN");
+        getRerun(rerun);
+    } else {
+        console.log("PASS");
+    }
+}
 function driver() {
     my_df = getDf(results, getInput1()); // create DataFrame 5
 
@@ -199,4 +298,10 @@ function driver() {
     my_df = my_df.withColumn('Datum Norm', datumNormFunc); // Generate new Collumn for Norm 70
 
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
+
+    sd_df = getSd(my_df);
+
+    pt = getPt(sd_df.toArray()[0]);
+
+    getStatus(pt);
 }
