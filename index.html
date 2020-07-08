@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-
 <head>
     <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OA Reproducibility Data Analysis</title>
@@ -8,9 +7,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
     <link rel="stylesheet" href="css/master.css">
 </head>
-
 <body>
-
     <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
         <a class="navbar-brand"><strong>Weiss</strong></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,37 +23,28 @@
                         <a class="dropdown-item" id="link1" href="#">OA Reproducibility</a>
                         <a class="dropdown-item" id="link2" href="#">OA Repeatability</a>
                         <a class="dropdown-item" id="link3" href="#">EP Reproducibility</a>
+                        <a class="dropdown-item" id="link4" href="#">EP Repeatability</a>
                     </div>
                 </li>
             </ul>
         </div>
     </nav>
-
     <div class="">
-
         <div class="container main">
             <div class="jumbotron">
-
                 <h1 class="display-4">OA Reproducibility Data Analysis</h1>
                 <p class="lead">Upload your file for processing!</p>
+                <p class="lead">Default Line to Remove: 7, Default Last k Run: 10</p>
                 <hr class="my-4">
-
                 <div class="input-group">
                     <div class="custom-file">
                         <input type="file" class="custom-file-input" id="inputFile" aria-describedby="inputFileAddon" accept=".csv">
                         <label class="custom-file-label" for="inputFile">Choose file</label>
                     </div>
                 </div>
-
-
-
             </div>
         </div>
-
-
-
     </div>
-
     <script src='js/bignumber.js'></script>
     <script src="js/papaparse.min.js"></script>
     <script src="https://gmousse.github.io/dataframe-js/dist/dataframe.js"></script>
@@ -65,5 +53,4 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
     <script type="text/javascript" src="js/myscript.js"></script>
 </body>
-
 </html>

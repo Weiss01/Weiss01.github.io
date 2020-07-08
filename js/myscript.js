@@ -7,13 +7,6 @@ var my_df2;
 var counter = 0;
 var medianCol;
 var medianCol2;
-var pxsd;
-var pysd;
-var dnsd;
-var rosd;
-var sxsd;
-var sysd;
-var prsd;
 var sd_df;
 var sd_df2;
 var pt;
@@ -52,6 +45,9 @@ function cleanup() {
     if (exists("parse")){
         $("#parse").remove();
     }
+    if (exists("input_div")){
+        $("#input_div").remove();
+    }
     document.getElementById("inputFile").value = "";
     $(".custom-file-label").text("Choose file");
 }
@@ -74,6 +70,11 @@ link2.click(function (event) {
 const link3 = $('#link3');
 link3.click(function (event) {
     $('.display-4').text("EP Reproducibility Data Analysis");
+    cleanup();
+})
+const link4 = $('#link4');
+link4.click(function (event) {
+    $('.display-4').text("EP Repeatability Data Analysis")
     cleanup();
 })
 const fileSelector = $('#inputFile');
@@ -148,7 +149,7 @@ function add_input_group() {
     input_box2.setAttribute('type', 'text');
     input_box2.setAttribute('class', 'form-control');
     input_box2.setAttribute('id', 'input_box2');
-    input_box2.setAttribute('placeholder', 'Last k Reproducibility Run');
+    input_box2.setAttribute('placeholder', 'Last k Run');
     var input_box3 = document.createElement("input");
     input_box3.setAttribute('type', 'text');
     input_box3.setAttribute('class', 'form-control');
@@ -164,15 +165,25 @@ function add_input_group() {
     process_button = $('#process');
     process_button.click(function () {
         console.log("Processing....");
-        add_progress_bar();
+        if (!exists("progress_div")){
+            add_progress_bar();
+        }
         if ($('.display-4').text() === "OA Reproducibility Data Analysis"){
             setTimeout(() => { oa1(); }, 1000);
         } else if ($('.display-4').text() === "OA Repeatability Data Analysis") {
             setTimeout(() => { oa2(); }, 1000);
         } else if ($('.display-4').text() === "EP Reproducibility Data Analysis") {
             setTimeout(() => { ep(); }, 1000);
+        } else if ($('.display-4').text() === "EP Repeatability Data Analysis") {
+            setTimeout(() => { ep2(); }, 1000);
         }
     })
+}
+window.onerror = function() {
+    errorHandler();
+};
+function errorHandler(){
+    window.location.replace("error.html");
 }
 function alert_complete() {
     $('#alert-bar').attr("class", "alert alert-success");
@@ -282,29 +293,29 @@ function getMean(groupData, header) {
     return sdDf.stat.mean(header);
 }
 function getSd(df, completeProbes) { // count EP : D
-    pxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset X [mm]')).rename('aggregation', 'Offset X Standard Deviation');
+    var pxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset X [mm]')).rename('aggregation', 'Offset X Standard Deviation');
     pxsd = pxsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var a = getMean(pxsd, 'Offset X Standard Deviation');
-    pysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset Y [mm]')).rename('aggregation', 'Offset Y Standard Deviation');
+    var pysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset Y [mm]')).rename('aggregation', 'Offset Y Standard Deviation');
     pysd = pysd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var b = getMean(pysd, 'Offset Y Standard Deviation');
-    dnsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Datum Norm')).rename('aggregation', 'Datum Norm Standard Deviation');
+    var dnsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Datum Norm')).rename('aggregation', 'Datum Norm Standard Deviation');
     dnsd = dnsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var c = getMean(dnsd, 'Datum Norm Standard Deviation');
-    rosd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Rad Offset')).rename('aggregation', 'Rad Offset Standard Deviation');
+    var rosd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Rad Offset')).rename('aggregation', 'Rad Offset Standard Deviation');
     rosd = rosd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var d = getMean(rosd, 'Rad Offset Standard Deviation');
     var resDf = new DataFrame([[a, b, c, d]], ['Offset X Standard Deviation', 'Offset Y Standard Deviation', 'Datum Norm Standard Deviation', 'Rad Offset Standard Deviation']);
     return resDf;
 }
 function getSd2(df, completeProbes) {
-    sxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size X [mm]')).rename('aggregation', 'Size X Standard Deviation');
+    var sxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size X [mm]')).rename('aggregation', 'Size X Standard Deviation');
     sxsd = sxsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var a = getMean(sxsd, 'Size X Standard Deviation');
-    sysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size Y [mm]')).rename('aggregation', 'Size Y Standard Deviation');
+    var sysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size Y [mm]')).rename('aggregation', 'Size Y Standard Deviation');
     sysd = sysd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var b = getMean(sysd, 'Size Y Standard Deviation');
-    prsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Pos R [deg]')).rename('aggregation', 'Pos R Standard Deviation');
+    var prsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Pos R [deg]')).rename('aggregation', 'Pos R Standard Deviation');
     prsd = prsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var c = getMean(prsd, 'Pos R Standard Deviation');
     var resDf = new DataFrame([[a, b, c]], ['Size X Standard Deviation', 'Size Y Standard Deviation', 'Pos R Standard Deviation']);
@@ -680,7 +691,7 @@ function oa2() {
     pt2 = getPt2(sd_df2.toArray()[0]);
 
     console.log("Evaluating Status...");
-    getStatusOa2(pt, pt2); /////////////////////////////////////SUBJECT TO CHANGE//////////////////////////////////////////////////////////
+    getStatusOa2(pt, pt2);
 
     console.log("Processing Complete!");
     $('#progress_div').remove();
@@ -688,7 +699,7 @@ function oa2() {
     showResult(generateThOa, generateItemOa);
 }
 function ep() {
-    console.log("Initiating MODE EP");
+    console.log("Initiating MODE EP1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
 
@@ -699,6 +710,42 @@ function ep() {
     my_df = filterStep(my_df); // filter Step == "Calc Result"
 
     medianCol = getMedianCol(my_df, 'Reproducibility Run', 'Final height [�m]'); // get collumn for Median
+
+    console.log("Generating Median Column...");
+    my_df = my_df.withColumn('Final Height Median', medianHelper); counter = 0; // Generate new Collumn for Median
+
+    console.log("Generating Final Height Norm Column...");
+    my_df = my_df.withColumn('Final Height Norm', heightNormHelper); // Generate new Collumn for Norm
+
+    console.log("Filtering Rows without Complete Ks...");
+    completeProbes = nRowFilterEp(my_df, getInput2()); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdEp(my_df, completeProbes); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0] * 0.83, 35);
+
+    console.log("Evaluating Status...");
+    getStatusEp(pt);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThEp, generateItemEp);
+}
+function ep2() {
+    console.log("Initiating MODE EP2");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability Run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability Run'); // filter last 10 Repeatability Run
+
+    console.log("Filtering Steps...");
+    my_df = filterStep(my_df); // filter Step == "Calc Result"
+
+    medianCol = getMedianCol(my_df, 'Repeatability Run', 'Final height [�m]'); // get collumn for Median
 
     console.log("Generating Median Column...");
     my_df = my_df.withColumn('Final Height Median', medianHelper); counter = 0; // Generate new Collumn for Median
