@@ -221,10 +221,10 @@ function filterStep(df) {
 }
 function median(arr) {
     const mid = Math.floor(arr.length / 2);
-    const nums = arr.sort();
+    const nums = arr.map(Number).sort((a, b) => a-b);
     return arr.length % 2 !== 0 ? Number(nums[mid]) : (Number(nums[mid - 1]) + Number(nums[mid])) / 2;
 }
-function calGroupMedian(groupCollection, groupNumber, colVal) { // 'Datum Z [mm]'
+function calGroupMedian(groupCollection, groupNumber, colVal) {
     var col = groupCollection[groupNumber]['group'].select(colVal).toArray();
     col = [].concat.apply([], col);
     var shell_list = new Array(col.length);
