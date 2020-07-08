@@ -307,7 +307,6 @@ function getSd2(df, completeProbes) {
     sysd = sysd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var b = getMean(sysd, 'Size Y Standard Deviation');
     prsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Pos R [deg]')).rename('aggregation', 'Pos R Standard Deviation');
-    console.log(prsd.toArray());
     prsd = prsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var c = getMean(prsd, 'Pos R Standard Deviation');
     var resDf = new DataFrame([[a, b, c]], ['Size X Standard Deviation', 'Size Y Standard Deviation', 'Pos R Standard Deviation']);
@@ -441,7 +440,7 @@ function getStatusOa2(ptResult1, ptResult2) {
     }
     for (var i = 0; i < 3; i++) {
         if (ptResult2[i] >= 0.15) {
-            fail.push(i);
+            fail2.push(i);
         } else {
             success.push(i);
         }
@@ -450,6 +449,10 @@ function getStatusOa2(ptResult1, ptResult2) {
         status = "FAIL";
         console.log("FAIL");
         getFailed(fail);
+    } else if (fail2.length > 0) {
+        status = "FAIL";
+        console.log("FAIL");
+        getFailed2(fail);
     } else {
         status = "PASS";
         console.log("PASS");
@@ -672,7 +675,7 @@ function oa2() {
 
     console.log("Calculating Mean and Standard Deviation...");
     sd_df = getSd(my_df, completeProbes);
-    sd_df2 = getSd2(my_df2, completeProbes);
+    sd_df2 = getSd2(my_df2, completeProbes2);
 
     console.log("Calculating P/T...");
     pt = getPt(sd_df.toArray()[0]);
