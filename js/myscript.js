@@ -299,11 +299,9 @@ function getSd(df, completeProbes) { // count EP : D
 }
 function getSd2(df, completeProbes) {
     sxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size X [mm]')).rename('aggregation', 'Size X Standard Deviation');
-    console.log(sxsd.toArray());
     sxsd = sxsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var a = getMean(sxsd, 'Size X Standard Deviation');
     sysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size Y [mm]')).rename('aggregation', 'Size Y Standard Deviation');
-    console.log(sysd.toArray());
     sysd = sysd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var b = getMean(sysd, 'Size Y Standard Deviation');
     prsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Pos R [deg]')).rename('aggregation', 'Pos R Standard Deviation');
