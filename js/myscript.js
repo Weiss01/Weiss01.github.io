@@ -430,14 +430,14 @@ function getStatusOa(ptResult1, ptResult2) {
 }
 function getStatusOa2(ptResult1, ptResult2) {
     for (var i = 0; i < 4; i++) {
-        if (ptResult1[i] >= 0.3) {
+        if (ptResult1[i] >= 0.15) {
             fail.push(i);
         } else {
             success.push(i);
         }
     }
     for (var i = 0; i < 3; i++) {
-        if (ptResult2[i] >= 0.3) {
+        if (ptResult2[i] >= 0.15) {
             fail.push(i);
         } else {
             success.push(i);
