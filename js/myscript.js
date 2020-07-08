@@ -49,6 +49,9 @@ function cleanup() {
     if (exists("alert_bp")){
         $('#alert_bp').remove();
     }
+    if (exists("parse")){
+        $("#parse").remove();
+    }
     document.getElementById("inputFile").value = "";
     $(".custom-file-label").text("Choose file");
 }
