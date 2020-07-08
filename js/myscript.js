@@ -278,24 +278,34 @@ function getMean(groupData, header) {
     var sdDf = new DataFrame(groupData.toCollection(), ['Probe ID', header]);
     return sdDf.stat.mean(header);
 }
-function getSd(df) { // count EP : D
+function getSd(df, completeProbes) { // count EP : D
     pxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset X [mm]')).rename('aggregation', 'Offset X Standard Deviation');
+    pxsd = pxsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var a = getMean(pxsd, 'Offset X Standard Deviation');
     pysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Offset Y [mm]')).rename('aggregation', 'Offset Y Standard Deviation');
+    pysd = pysd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var b = getMean(pysd, 'Offset Y Standard Deviation');
     dnsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Datum Norm')).rename('aggregation', 'Datum Norm Standard Deviation');
+    dnsd = dnsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var c = getMean(dnsd, 'Datum Norm Standard Deviation');
     rosd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Rad Offset')).rename('aggregation', 'Rad Offset Standard Deviation');
+    rosd = rosd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var d = getMean(rosd, 'Rad Offset Standard Deviation');
     var resDf = new DataFrame([[a, b, c, d]], ['Offset X Standard Deviation', 'Offset Y Standard Deviation', 'Datum Norm Standard Deviation', 'Rad Offset Standard Deviation']);
     return resDf;
 }
-function getSd2(df) {
+function getSd2(df, completeProbes) {
     sxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size X [mm]')).rename('aggregation', 'Size X Standard Deviation');
+    console.log(sxsd.toArray());
+    sxsd = sxsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var a = getMean(sxsd, 'Size X Standard Deviation');
     sysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size Y [mm]')).rename('aggregation', 'Size Y Standard Deviation');
+    console.log(sysd.toArray());
+    sysd = sysd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var b = getMean(sysd, 'Size Y Standard Deviation');
     prsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Pos R [deg]')).rename('aggregation', 'Pos R Standard Deviation');
+    console.log(prsd.toArray());
+    prsd = prsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var c = getMean(prsd, 'Pos R Standard Deviation');
     var resDf = new DataFrame([[a, b, c]], ['Size X Standard Deviation', 'Size Y Standard Deviation', 'Pos R Standard Deviation']);
     return resDf;
@@ -307,10 +317,15 @@ function getSdEp(df, completeProbes) { // nCount.filter(row => row.get('nrows') 
     var resDf = new DataFrame([[a]], ['Final Height Norm Standard Deviation']);
     return resDf;
 }
-function nRowFilter(df, k) {
+function nRowFilterEp(df, k) {
     var nCount = df.groupBy('Probe Id').aggregate(group => group.count()).rename('aggregation', 'nrows');
     var probeswithk =  nCount.filter(row => row.get('nrows') == k);
     return [].concat.apply([], probeswithk.select('Probe Id').toArray());
+}
+function nRowFilterOa(df, k) {
+    var nCount = df.groupBy('Probe ID').aggregate(group => group.count()).rename('aggregation', 'nrows');
+    var probeswithk =  nCount.filter(row => row.get('nrows') == k);
+    return [].concat.apply([], probeswithk.select('Probe ID').toArray());
 }
 function getPtNum(mean, constant) {
     return mean * 6 / constant;
@@ -604,9 +619,13 @@ function oa1() {
     console.log("Generating Rad Offset Column...");
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
 
+    console.log("Filtering Rows without Complete Ks...");
+    completeProbes = nRowFilterOa(my_df, getInput2()); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilterOa(my_df2, getInput2());
+
     console.log("Calculating Standard Deviation...");
-    sd_df = getSd(my_df);
-    sd_df2 = getSd2(my_df2);
+    sd_df = getSd(my_df, completeProbes);
+    sd_df2 = getSd2(my_df2, completeProbes2);
 
     console.log("Calculating P/T...");
     pt = getPt(sd_df.toArray()[0]);
@@ -626,8 +645,8 @@ function oa2() {
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
 
-    console.log("Filtering last " + getInput2() + " Reproducibility Run...");
-    my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run
+    console.log("Filtering last " + getInput2() + " Repeatability Run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability Run'); // filter last 10 Reproducibility Run
 
     console.log("Removing 0s and Blanks...");
     my_df = filtermeasState(my_df); // filter out 0s and blanks
@@ -644,9 +663,13 @@ function oa2() {
     console.log("Generating Rad Offset Column...");
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset
 
+    console.log("Filtering Rows without Complete Ks...");
+    completeProbes = nRowFilterOa(my_df, getInput2()); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilterOa(my_df2, getInput2());
+
     console.log("Calculating Mean and Standard Deviation...");
-    sd_df = getSd(my_df);
-    sd_df2 = getSd2(my_df2);
+    sd_df = getSd(my_df, completeProbes);
+    sd_df2 = getSd2(my_df2, completeProbes);
 
     console.log("Calculating P/T...");
     pt = getPt(sd_df.toArray()[0]);
@@ -680,7 +703,7 @@ function ep() {
     my_df = my_df.withColumn('Final Height Norm', heightNormHelper); // Generate new Collumn for Norm
 
     console.log("Filtering Rows without Complete Ks...");
-    completeProbes = nRowFilter(my_df, getInput2()); // get list of probe ids with complete Ks
+    completeProbes = nRowFilterEp(my_df, getInput2()); // get list of probe ids with complete Ks
 
     console.log("Calculating Mean and Standard Deviation...");
     my_df = getSdEp(my_df, completeProbes); // get mean of sd of final height
