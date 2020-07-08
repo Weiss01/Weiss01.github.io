@@ -5,8 +5,8 @@ var results;
 var my_df;
 var my_df2;
 var counter = 0;
-var datumzMedianCol;
-var datumzMedianCol2;
+var medianCol;
+var medianCol2;
 var pxsd;
 var pysd;
 var dnsd;
@@ -19,6 +19,7 @@ var sd_df2;
 var pt;
 var pt2;
 var status;
+
 function cleanup() {
     if (exists("progress_div")) {
         $("#progress_div").remove();
@@ -41,6 +42,8 @@ function cleanup() {
     if (exists("alert_bp")){
         $('#alert_bp').remove();
     }
+    document.getElementById("inputFile").value = "";
+    $(".custom-file-label").text("Choose file");
 }
 function exists(id) {
     if (document.getElementById(id) === null){
@@ -52,15 +55,16 @@ const link1 = $('#link1');
 link1.click(function (event) {
     $('.display-4').text("OA Reproducibility Data Analysis");
     cleanup();
-    document.getElementById("inputFile").value = "";
-    $(".custom-file-label").text("Choose file");
 })
 const link2 = $('#link2');
 link2.click(function (event) {
     $('.display-4').text("OA Repeatability Data Analysis");
     cleanup();
-    document.getElementById("inputFile").value = "";
-    $(".custom-file-label").text("Choose file");
+})
+const link3 = $('#link3');
+link2.click(function (event) {
+    $('.display-4').text("EP Reproducibility Data Analysis");
+    cleanup();
 })
 const fileSelector = $('#inputFile');
 fileSelector.change(function (event) {
@@ -155,6 +159,8 @@ function add_input_group() {
             setTimeout(() => { oa1(); }, 1000);
         } else if ($('.display-4').text() === "OA Repeatability Data Analysis") {
             setTimeout(() => { oa2(); }, 1000);
+        } else if ($('.display-4').text() === "EP Reproducibility Data Analysis") {
+            setTimeout(() => { ep(); }, 1000);
         }
     })
 }
@@ -203,35 +209,43 @@ function filtermeasState(df) {
 function filtermeasState2(df) {
     return df.filter(row => row.get('Meas State') == 10);
 }
+function filterStep(df) {
+    return df.filter(row => row.get('Step') == "Calc results");
+}
 function median(arr) {
     const mid = Math.floor(arr.length / 2);
     const nums = arr.sort();
     return arr.length % 2 !== 0 ? Number(nums[mid]) : (Number(nums[mid - 1]) + Number(nums[mid])) / 2;
 }
-function calGroupMedian(groupCollection, groupNumber) {
-    var col = groupCollection[groupNumber]['group'].select('Datum Z [mm]').toArray();
+function calGroupMedian(groupCollection, groupNumber, colVal) { // 'Datum Z [mm]'
+    var col = groupCollection[groupNumber]['group'].select(colVal).toArray();
     col = [].concat.apply([], col);
     var shell_list = new Array(col.length);
     shell_list.fill(median(col));
     return shell_list;
 }
-function getMedianCol(df, col) {
+function getMedianCol(df, groupCol, valCol) {
     var res_row = [];
-    var collection = df.groupBy(col).toCollection();
+    var collection = df.groupBy(groupCol).toCollection();
     for (var i = 0; i < collection.length; i++) {
         console.log("Calculating Median for group " + (i+1) + "...");
-        res_row = res_row.concat(calGroupMedian(collection, i));
+        res_row = res_row.concat(calGroupMedian(collection, i, valCol));
     }
     return res_row;
 }
-function datumMedianHelper() {
+function medianHelper() {
     var res = counter;
     counter = counter + 1;
-    return datumzMedianCol[res];
+    return medianCol[res];
 }
 function datumNormFunc(row) {
     const a = new BigNumber(row.get('Datum Z [mm]'));
     const b = new BigNumber(row.get('Datum Z Median'));
+    return a.minus(b).toFixed();
+}
+function heightNormHelper(row) {
+    const a = new BigNumber(row.get('Final height [�m]')); // check if charcode working
+    const b = new BigNumber(row.get('Final Height Median'));
     return a.minus(b).toFixed();
 }
 function radOffsetHelper(row) {
@@ -278,6 +292,10 @@ function getSd2(df){
     var c = getMean(prsd, 'Pos R Standard Deviation');
     var resDf = new DataFrame([[a, b, c]], ['Size X Standard Deviation', 'Size Y Standard Deviation', 'Pos R Standard Deviation']);
     return resDf;
+}
+function nRowFilter(df) {
+    // return df.filter(row => row.get('Meas State') == 10);
+    nCount = df.groupBy('Probe ID').aggregate(group => group.count()).rename('aggregation', 'nrows');
 }
 function getPtNum(mean, constant){
     return mean * 6 / constant;
@@ -432,7 +450,7 @@ function oa1() {
     my_df = filtermeasState(my_df); // filter out 0s and blanks 15
     my_df2 = filtermeasState2(my_df);
 
-    datumzMedianCol = getMedianCol(my_df, 'Reproducibility Run'); // get collumn for Median 30
+    medianCol = getMedianCol(my_df, 'Reproducibility Run'); // get collumn for Median 30
 
     my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median 50
 
@@ -455,12 +473,12 @@ function oa1() {
 function oa2() {
     my_df = getDf(results, getInput1()); // create DataFrame
 
-    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability Run'); // filter last 10 Reproducibility Run
+    my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run
 
     my_df = filtermeasState(my_df); // filter out 0s and blanks
     my_df2 = filtermeasState2(my_df);
 
-    datumzMedianCol = getMedianCol(my_df, 'Repeatability Run'); // get collumn for Median
+    medianCol = getMedianCol(my_df, 'Repeatability Run', 'Datum Z [mm]'); // get collumn for Median
 
     my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median
 
@@ -479,4 +497,17 @@ function oa2() {
     $('#progress_div').remove();
 
     showResult();
+}
+function ep() {
+    my_df = getDf(results, getInput1()); // create DataFrame
+
+    my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run
+
+    my_df = filterStep(my_df); // filter Step == "Calc Result"
+
+    medianCol = getMedianCol(my_df, 'Repeatability Run', 'Final height [�m]'); // get collumn for Median
+
+    my_df = my_df.withColumn('Final Height Median', medianHelper); counter = 0; // Generate new Collumn for Median
+
+    my_df = my_df.withColumn('Final Height Norm', heightNormHelper); // Generate new Collumn for Norm
 }
