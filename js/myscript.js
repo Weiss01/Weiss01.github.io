@@ -19,8 +19,15 @@ var sd_df2;
 var pt;
 var pt2;
 var status;
+var fail = [];
+var fail2 = [];
+var rerun = [];
+var success = [];
 
 function cleanup() {
+    if (exists("list_div")) {
+        $("#list_div").remove();
+    }
     if (exists("progress_div")) {
         $("#progress_div").remove();
     }
@@ -62,7 +69,7 @@ link2.click(function (event) {
     cleanup();
 })
 const link3 = $('#link3');
-link2.click(function (event) {
+link3.click(function (event) {
     $('.display-4').text("EP Reproducibility Data Analysis");
     cleanup();
 })
@@ -255,19 +262,19 @@ function radOffsetHelper(row) {
 }
 function getInput1() {
     var res = 0;
-    if ($("#input_box1").val() === ""){
+    if ($("#input_box1").val() === "") {
         res = 7;
     }else{ res = Number($("#input_box1").val()); }
     return res;
 }
 function getInput2() {
     var res = 0;
-    if ($("#input_box2").val() === ""){
+    if ($("#input_box2").val() === "") {
         res = 10;
     }else{ res = Number($("#input_box2").val()); }
     return res;
 }
-function getMean(groupData, header){
+function getMean(groupData, header) {
     var sdDf = new DataFrame(groupData.toCollection(), ['Probe ID', header]);
     return sdDf.stat.mean(header);
 }
@@ -283,7 +290,7 @@ function getSd(df) { // count EP : D
     var resDf = new DataFrame([[a, b, c, d]], ['Offset X Standard Deviation', 'Offset Y Standard Deviation', 'Datum Norm Standard Deviation', 'Rad Offset Standard Deviation']);
     return resDf;
 }
-function getSd2(df){
+function getSd2(df) {
     sxsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size X [mm]')).rename('aggregation', 'Size X Standard Deviation');
     var a = getMean(sxsd, 'Size X Standard Deviation');
     sysd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Size Y [mm]')).rename('aggregation', 'Size Y Standard Deviation');
@@ -293,32 +300,40 @@ function getSd2(df){
     var resDf = new DataFrame([[a, b, c]], ['Size X Standard Deviation', 'Size Y Standard Deviation', 'Pos R Standard Deviation']);
     return resDf;
 }
-function nRowFilter(df) {
-    // return df.filter(row => row.get('Meas State') == 10);
-    nCount = df.groupBy('Probe ID').aggregate(group => group.count()).rename('aggregation', 'nrows');
+function getSdEp(df, completeProbes) { // nCount.filter(row => row.get('nrows') == k);
+    fhsd = df.groupBy('Probe Id').aggregate(group => group.stat.sd('Final Height Norm')).rename('aggregation', 'Final Height Norm Standard Deviation');
+    fhsd = fhsd.filter(row => completeProbes.includes(row.get('Probe Id')));
+    var a = getMean(fhsd, 'Final Height Norm Standard Deviation');
+    var resDf = new DataFrame([[a]], ['Final Height Norm Standard Deviation']);
+    return resDf;
 }
-function getPtNum(mean, constant){
+function nRowFilter(df, k) {
+    var nCount = df.groupBy('Probe Id').aggregate(group => group.count()).rename('aggregation', 'nrows');
+    var probeswithk =  nCount.filter(row => row.get('nrows') == k);
+    return [].concat.apply([], probeswithk.select('Probe Id').toArray());
+}
+function getPtNum(mean, constant) {
     return mean * 6 / constant;
 }
 function getPt(meanArr) {
     var res = [];
-    for (var i = 0; i < 4; i++){
-        if (i === 0 || i === 1){
+    for (var i = 0; i < 4; i++) {
+        if (i === 0 || i === 1) {
             res[i] = getPtNum(meanArr[i], 0.028);
-        }else if (i === 2){
+        }else if (i === 2) {
             res[i] = getPtNum(meanArr[i], 0.035);
-        }else if (i === 3){
+        }else if (i === 3) {
             res[i] = getPtNum(meanArr[i], 0.02);
         }
     }
     return res;
 }
-function getPt2(meanArr){
+function getPt2(meanArr) {
     var res = [];
-    for (var i = 0; i < 3; i++){
-        if (i === 0 || i === 1){
+    for (var i = 0; i < 3; i++) {
+        if (i === 0 || i === 1) {
             res[i] = getPtNum(meanArr[i], 0.008);
-        }else if (i === 2){
+        }else if (i === 2) {
             res[i] = getPtNum(meanArr[i], 9);
         }
     }
@@ -326,36 +341,45 @@ function getPt2(meanArr){
 }
 function getFailed(arr){
     console.log("The following items failed: ")
-    forEach((item, i) => {
-        if (item === 0){
+    fail.forEach((item, i) => {
+        if (item === 0) {
             console.log("Offset X");
-        }else if (item === 1){
+        }else if (item === 1) {
             console.log("Offset Y");
-        }else if (item === 2){
+        }else if (item === 2) {
             console.log("Datum Norm");
-        }else{
+        }else {
             console.log("Rad Offset");
+        }
+    });
+}
+function getFailed2(arr){
+    console.log("The following items failed: ")
+    fail2.forEach((item, i) => {
+        if (item === 0) {
+            console.log("Size X");
+        }else if (item === 1) {
+            console.log("Size Y");
+        }else {
+            console.log("Pos R");
         }
     });
 }
 function getRerun(arr){
     console.log("The following items needs rerun: ")
-    forEach((item, i) => {
+    rerun.forEach((item, i) => {
         if (item === 0){
             console.log("Offset X");
-        }else if (item === 1){
+        }else if (item === 1) {
             console.log("Offset Y");
-        }else if (item === 2){
+        }else if (item === 2) {
             console.log("Datum Norm");
-        }else{
+        }else {
             console.log("Rad Offset");
         }
     });
 }
-function getStatus(ptResult1, ptResult2) {
-    var fail = [];
-    var rerun = [];
-    var success = [];
+function getStatusOa(ptResult1, ptResult2) {
     for (var i = 0; i < 4; i++) {
         if (ptResult1[i] >= 0.3){
             fail.push(i);
@@ -366,16 +390,20 @@ function getStatus(ptResult1, ptResult2) {
         }
     }
     for (var i = 0; i < 3; i++) {
-        if (ptResult2[i] >= 0.3){
-            fail.push(i);
+        if (ptResult2[i] >= 0.30){
+            fail2.push(i);
         }else{
             success.push(i);
         }
     }
     if (fail.length > 0){
-        status = "Fail";
+        status = "FAIL";
         console.log("FAIL");
         getFailed(fail);
+    } else if (fail2.length > 0) {
+        status = "FAIL";
+        console.log("FAIL");
+        getFailed2(fail2);
     } else if (rerun.length > 0) {
         status = "RUN REPEATABILITY AGAIN";
         console.log("RUN REPEATABILITY AGAIN");
@@ -385,7 +413,64 @@ function getStatus(ptResult1, ptResult2) {
         console.log("PASS");
     }
 }
-function showResult() {
+function getStatusOa2(ptResult1, ptResult2) {
+    for (var i = 0; i < 4; i++) {
+        if (ptResult1[i] >= 0.3) {
+            fail.push(i);
+        } else {
+            success.push(i);
+        }
+    }
+    for (var i = 0; i < 3; i++) {
+        if (ptResult2[i] >= 0.3) {
+            fail.push(i);
+        } else {
+            success.push(i);
+        }
+    }
+    if (fail.length > 0){
+        status = "FAIL";
+        console.log("FAIL");
+        getFailed(fail);
+    } else {
+        status = "PASS";
+        console.log("PASS");
+    }
+}
+function getStatusEp(pt) {
+    if (pt > 0.3) {
+        status = "FAIL";
+        console.log("FAIL");
+    }else {
+        status = "PASS";
+        console.log("PASS");
+    }
+}
+function generateThOa() {
+    addHeader("Offset X (P/T)");
+    addHeader("Offset Y (P/T)");
+    addHeader("Datum Norm (P/T)");
+    addHeader("Rad Offset (P/T)");
+    addHeader("Size X (P/T)");
+    addHeader("Size Y (P/T)");
+    addHeader("Pos R (P/T)");
+}
+function generateItemOa() {
+    addItem(pt[0]);
+    addItem(pt[1]);
+    addItem(pt[2]);
+    addItem(pt[3]);
+    addItem(pt2[0]);
+    addItem(pt2[1]);
+    addItem(pt2[2]);
+}
+function generateThEp(){
+    addHeader("Final Height (P/T)");
+}
+function generateItemEp() {
+    addItem(pt);
+}
+function showResult(headFunc, itemFunc) {
     $("#input_group").remove();
     $('#alert-bar').text("Finished Processing " + file_list[0].name);
     var results_div = document.createElement('div');
@@ -406,21 +491,9 @@ function showResult() {
     $('.table').append(table_head);
     $('.table').append(table_body);
     $('#table_head').append(head_row);
-    addHeader("Offset X (P/T)");
-    addHeader("Offset Y (P/T)");
-    addHeader("Datum Norm (P/T)");
-    addHeader("Rad Offset (P/T)");
-    addHeader("Size X (P/T)");
-    addHeader("Size Y (P/T)");
-    addHeader("Pos R (P/T)");
+    headFunc();
     $('#table_body').append(body_row);
-    addItem(pt[0]);
-    addItem(pt[1]);
-    addItem(pt[2]);
-    addItem(pt[3]);
-    addItem(pt2[0]);
-    addItem(pt2[1]);
-    addItem(pt2[2]);
+    itemFunc();
     var bp = document.createElement('br');
     bp.setAttribute("id", "status_bp");
     var status_bar = document.createElement('div');
@@ -430,6 +503,11 @@ function showResult() {
     $('.results').append(bp);
     $('.results').append(status_bar);
     $('#status_bar').html("<strong>" + status + "</strong>");
+    if (status === "FAIL") {
+        generatefailListOA();
+    }else if (status === "RUN REPEATABILITY AGAIN") {
+        generatererunListOA();
+    }
 }
 function addHeader(content) {
     var head_item = document.createElement('th');
@@ -442,72 +520,179 @@ function addItem(content) {
     body_item.innerHTML = Number.parseFloat(content).toFixed(10);
     $('#body_row').append(body_item);
 }
+function addListDiv() {
+    var list_div = document.createElement('div');
+    list_div.setAttribute('class', 'container');
+    list_div.setAttribute('id', 'list_div');
+    var bp = document.createElement('br')
+    bp.setAttribute('id', 'list_bp');
+    var list_alert = document.createElement('div');
+    list_alert.setAttribute('class', 'alert alert-warning listbox');
+    list_alert.setAttribute('role', 'alert');
+    list_alert.setAttribute('id', 'list_alert');
+    var un_list = document.createElement('ul');
+    un_list.setAttribute('class', 'list-group');
+    un_list.setAttribute('id', 'un_list');
+    $('.jumbotron').append(list_div);
+    $('#list_div').append(bp);
+    $('#list_div').append(list_alert);
+    $('#list_alert').append(un_list);
+}
+function addItemListDiv(content) {
+    var item = document.createElement('li');
+    item.setAttribute('class', 'list-group-item');
+    item.innerHTML =  content;
+    $('#un_list').append(item);
+}
+function generatefailListOA() {
+    addListDiv();
+    fail.forEach((item, i) => {
+        if (item === 0) {
+            addItemListDiv("Offset X");
+        }else if (item === 1) {
+            addItemListDiv("Offset Y");
+        }else if (item === 2) {
+            addItemListDiv("Datum Norm");
+        }else {
+            addItemListDiv("Rad Offset");
+        }
+    });
+    fail2.forEach((item, i) => {
+        if (item === 0) {
+            addItemListDiv("Size X");
+        }else if (item === 1) {
+            addItemListDiv("Size Y");
+        }else {
+            addItemListDiv("Pos R");
+        }
+    });
+}
+function generatererunListOA() {
+    addListDiv();
+    rerun.forEach((item, i) => {
+        if (item === 0){
+            addItemListDiv("Offset X");
+        }else if (item === 1) {
+            addItemListDiv("Offset Y");
+        }else if (item === 2) {
+            addItemListDiv("Datum Norm");
+        }else {
+            addItemListDiv("Rad Offset");
+        }
+    });
+}
 function oa1() {
+    console.log("Initiating MODE OA1");
+    console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame 5
 
+    console.log("Filtering last " + getInput2() + " Reproducibility Run...");
     my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run 10
 
+    console.log("Removing 0s and Blanks...");
     my_df = filtermeasState(my_df); // filter out 0s and blanks 15
     my_df2 = filtermeasState2(my_df);
 
-    medianCol = getMedianCol(my_df, 'Reproducibility Run'); // get collumn for Median 30
+    medianCol = getMedianCol(my_df, 'Reproducibility Run', 'Datum Z [mm]'); // get collumn for Median 30
 
-    my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median 50
+    console.log("Generating Median Column...");
+    my_df = my_df.withColumn('Datum Z Median', medianHelper); counter = 0; // Generate new Collumn for Median 50
 
+    console.log("Generating Datum Norm Column...");
     my_df = my_df.withColumn('Datum Norm', datumNormFunc); // Generate new Collumn for Norm 70
 
+    console.log("Generating Rad Offset Column...");
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
 
+    console.log("Calculating Standard Deviation...");
     sd_df = getSd(my_df);
     sd_df2 = getSd2(my_df2);
 
+    console.log("Calculating P/T...");
     pt = getPt(sd_df.toArray()[0]);
     pt2 = getPt2(sd_df2.toArray()[0]);
 
-    getStatus(pt, pt2);
+    console.log("Evaluating Status...");
+    getStatusOa(pt, pt2);
+
+    console.log("Processing Complete!");
 
     $('#progress_div').remove();
 
-    showResult();
+    showResult(generateThOa, generateItemOa);
 }
 function oa2() {
+    console.log("Initiating MODE OA2");
+    console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
 
+    console.log("Filtering last " + getInput2() + " Reproducibility Run...");
     my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run
 
+    console.log("Removing 0s and Blanks...");
     my_df = filtermeasState(my_df); // filter out 0s and blanks
     my_df2 = filtermeasState2(my_df);
 
-    medianCol = getMedianCol(my_df, 'Repeatability Run', 'Datum Z [mm]'); // get collumn for Median
+    medianCol = getMedianCol(my_df, 'Repeatability Run', 'Datum Z [mm]'); /////////////////////////////////////SUBJECT TO CHANGE///////
 
-    my_df = my_df.withColumn('Datum Z Median', datumMedianHelper); counter = 0; // Generate new Collumn for Median
+    console.log("Generating Median Column...");
+    my_df = my_df.withColumn('Datum Z Median', medianHelper); counter = 0; // Generate new Collumn for Median
 
+    console.log("Generating Datum Norm Column...");
     my_df = my_df.withColumn('Datum Norm', datumNormFunc); // Generate new Collumn for Norm
 
+    console.log("Generating Rad Offset Column...");
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset
 
+    console.log("Calculating Mean and Standard Deviation...");
     sd_df = getSd(my_df);
     sd_df2 = getSd2(my_df2);
 
+    console.log("Calculating P/T...");
     pt = getPt(sd_df.toArray()[0]);
     pt2 = getPt2(sd_df2.toArray()[0]);
 
-    getStatus(pt, pt2);
+    console.log("Evaluating Status...");
+    getStatusOa2(pt, pt2); /////////////////////////////////////SUBJECT TO CHANGE//////////////////////////////////////////////////////////
 
+    console.log("Processing Complete!");
     $('#progress_div').remove();
 
-    showResult();
+    showResult(generateThOa, generateItemOa);
 }
 function ep() {
+    console.log("Initiating MODE EP");
+    console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
 
+    console.log("Filtering last " + getInput2() + " Reproducibility Run...");
     my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility Run'); // filter last 10 Reproducibility Run
 
+    console.log("Filtering Steps...");
     my_df = filterStep(my_df); // filter Step == "Calc Result"
 
-    medianCol = getMedianCol(my_df, 'Repeatability Run', 'Final height [�m]'); // get collumn for Median
+    medianCol = getMedianCol(my_df, 'Reproducibility Run', 'Final height [�m]'); // get collumn for Median
 
+    console.log("Generating Median Column...");
     my_df = my_df.withColumn('Final Height Median', medianHelper); counter = 0; // Generate new Collumn for Median
 
+    console.log("Generating Final Height Norm Column...");
     my_df = my_df.withColumn('Final Height Norm', heightNormHelper); // Generate new Collumn for Norm
+
+    console.log("Filtering Rows without Complete Ks...");
+    completeProbes = nRowFilter(my_df, getInput2()); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdEp(my_df, completeProbes); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0] * 0.83, 35);
+
+    console.log("Evaluating Status...");
+    getStatusEp(pt);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThEp, generateItemEp);
 }

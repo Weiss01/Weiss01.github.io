@@ -18,10 +18,24 @@ th{
     margin: 0 auto;
 }
 
+.table{
+    width: auto;
+    margin: auto;
+}
+
 .status{
     margin: 0 auto;
     padding: 25px;
     text-align: center;
-    height: 80px;
+    height: auto;
     width: 20%;
+}
+
+.listbox {
+    margin: auto;
+    width: 500px;
+}
+
+li {
+    text-align: center;
 }
