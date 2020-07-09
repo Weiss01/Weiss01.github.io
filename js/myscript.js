@@ -11,6 +11,8 @@ var sd_df;
 var sd_df2;
 var pt;
 var pt2;
+var th1;
+var th2;
 var status;
 var fail = [];
 var fail2 = [];
@@ -104,21 +106,26 @@ link9.click(function (event) {
 })
 const link10 = $('#link10');
 link10.click(function (event) {
-    $('.display-4').text("Cap Leakage at OT Data Analysis")
+    $('.display-4').text("Capacity Repeatability Data Analysis")
     cleanup();
 })
 const link11 = $('#link11');
 link11.click(function (event) {
-    $('.display-4').text("Resistance Data Analysis")
+    $('.display-4').text("Capacity Data Analysis")
     cleanup();
 })
 const link12 = $('#link12');
 link12.click(function (event) {
-    $('.display-4').text("Array Force Data Analysis")
+    $('.display-4').text("Capacity Data Analysis")
     cleanup();
 })
 const link13 = $('#link13');
 link13.click(function (event) {
+    $('.display-4').text("Resistor Repeatability Data Analysis")
+    cleanup();
+})
+const link14 = $('#link14');
+link14.click(function (event) {
     $('.display-4').text("Lateral Movement Data Analysis")
     cleanup();
 })
@@ -231,14 +238,16 @@ function add_input_group() {
             setTimeout(() => { leak2(); }, 1000);
         } else if ($('.display-4').text() === "I/O Leakage @OT Repeatability Data Analysis") {
             setTimeout(() => { leak3(); }, 1000);
-        } else if ($('.display-4').text() === "Cap Leakage at OT Data Analysis") {
-            setTimeout(() => { capleakatOt(); }, 1000);
+        } else if ($('.display-4').text() === "Capacity Repeatability Data Analysis") {
+            setTimeout(() => { cap(); }, 1000);
         } else if ($('.display-4').text() === "Resistance Data Analysis") {
             setTimeout(() => { resist(); }, 1000);
         } else if ($('.display-4').text() === "Array Force Data Analysis") {
             setTimeout(() => { af(); }, 1000);
+        } else if ($('.display-4').text() === "Resistor Repeatability Data Analysis") {
+            setTimeout(() => { res(); }, 1000);
         } else if ($('.display-4').text() === "Lateral Movement Data Analysis") {
-            setTimeout(() => { latMov(); }, 1000);
+            setTimeout(() => { latmov(); }, 1000);
         }
     })
 }
@@ -402,7 +411,6 @@ function getSdCr(df, completeProbes) {
 function getSdLeak(df, completeProbes) {
     var asd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [A]')).rename('aggregation', 'Mean [A] Standard Deviation');
     asd = asd.filter(row => completeProbes.includes(row.get('Result ID')));
-    console.log(asd)
     var a = getMean(asd, 'Mean [A] Standard Deviation');
     var resDf = new DataFrame([[a]], ['Mean [A] Standard Deviation']);
     return resDf;
@@ -413,7 +421,10 @@ function nRowFilter(df, k, col) {
     return [].concat.apply([], probeswithk.select(col).toArray());
 }
 function getPtNum(mean, constant) {
-    return mean * 6 / constant;
+    const m = new BigNumber(mean);
+    const c = new BigNumber(constant);
+    const six = new BigNumber(6);
+    return m.times(six).div(c);
 }
 function getPt(meanArr) {
     var res = [];
@@ -632,6 +643,20 @@ function generateThLeak(){
 function generateItemLeak() {
     addItem(pt);
     addItem(pt2);
+}
+function generateThres(){
+    addHeader("Test Head 1 Resistance (P/V)");
+    addHeader("Test Head 2 Resistance (P/V)");
+}
+function generateItemres() {
+    addItem(pt);
+    addItem(pt2);
+}
+function generateThlat() {
+    addHeader("Lateral Movement (P/V)");
+}
+function generateItemlat() {
+    addItem(pt);
 }
 function showResult(headFunc, itemFunc) {
     $("#input_group").remove();
@@ -1043,10 +1068,37 @@ function leak3() {
 
     showResult(generateThLeak, generateItemLeak);
 }
+function custom(df, completeProbes) {
+    var msd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [F]')).rename('aggregation', 'Mean [F] Standard Deviation');
+    msd = msd.filter(row => completeProbes.includes(row.get('Result ID')));
+    var emean = df.groupBy('Result ID').aggregate(group => group.stat.mean('Expected value')).rename('aggregation', 'Expected Value Mean');
+    emean = emean.filter(row => completeProbes.includes(row.get('Result ID')));
+    var resDf = [msd, emean]
+    return resDf;
+}
+function vconst(ev) {
+
+}
 function cap() {
     console.log("Initiating MODE CAP");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    my_df2 = my_df.filter(row => row.get('Test head') == 2);
+    my_df = my_df.filter(row => row.get('Test head') == 1);
+
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    th1 = custom(my_df, completeProbes);
+    th2 = custom(my_df2, completeProbes2);
+
+    my_df = th1[1].withColumn('v', (row) => row.get('Expected Value Mean') * 0.4).withColumn('v', (row) => row.get('v'));
+    my_df2 = th2[1].withColumn('v', (row) => row.get('Expected Value Mean') * 0.4).withColumn('v', (row) => row.get('v'));
+
 }
 function capleak() {
     console.log("Initiating MODE CAPLEAK");
@@ -1063,13 +1115,90 @@ function resist() {
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
 }
-function af() {
-    console.log("Initiating MODE AF");
+function getSdres(df, completeProbes) {
+    var ohmsd = df.stat.sd('Mean [Ohm]');
+    var emean = df.stat.mean('Expected value');
+    var resDf = new DataFrame([[ohmsd, emean]], ['Mean [Ohm] Standard Deviation', 'Expected Value Mean']);
+    return resDf;
+}
+function res() {
+    console.log("Initiating MODE RES");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    my_df2 = my_df.filter(row => row.get('Test head') == 2);
+    my_df = my_df.filter(row => row.get('Test head') == 1);
+
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdres(my_df, completeProbes); // get mean of sd of final height
+    my_df2 = getSdres(my_df2, completeProbes2); // get mean of sd of final height
+
+    console.log("Calculating P/V Ratio...");
+    pt = getPtNum(my_df.toArray()[0][0], my_df.toArray()[0][1] * 0.01);
+    pt2 = getPtNum(my_df2.toArray()[0][0], my_df2.toArray()[0][1] * 0.01);
+
+    console.log("Evaluating Status...");
+    getStatusres(pt, pt2);
+
+    console.log("Processing Complete!");
+
+    $('#progress_div').remove();
+
+    showResult(generateThres, generateItemres);
 }
-function latMov() {
+function latmov() {
     console.log("Initiating MODE LATMOV");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    completeProbes = nRowFilter(my_df, getInput2(), 'Probe ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdlatmov(my_df, completeProbes); // get mean of sd of final height
+
+    console.log("Calculating P/V...");
+    pt = my_df.toArray()[0] / 0.0125;
+
+    console.log("Evaluating Status...");
+    getStatuslat(pt);
+
+    console.log("Processing Complete!");
+
+    $('#progress_div').remove();
+
+    showResult(generateThlat, generateItemlat);
+}
+function getSdlatmov() {
+    var lmsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Lateral movemment [mm]')).rename('aggregation', 'Lateral Movement [mm] Standard Deviation');
+    lmsd = lmsd.filter(row => completeProbes.includes(row.get('Probe ID')));
+    var a = getMean(lmsd, 'Lateral Movement [mm] Standard Deviation');
+    var resDf = new DataFrame([[a]], ['Lateral Movement [mm] Standard Deviation']);
+    return resDf;
+}
+function getStatuslat(pt) {
+    if (pt >= 0.15){
+        status = "FAIL";
+        console.log("FAIL");
+    }  else {
+        status = "PASS";
+        console.log("PASS");
+    }
+}
+function getStatusres(pt, pt2) {
+    if (pt >= 0.15 || pt2 >= 0.15){
+        status = "FAIL";
+        console.log("FAIL");
+    }  else {
+        status = "PASS";
+        console.log("PASS");
+    }
 }
