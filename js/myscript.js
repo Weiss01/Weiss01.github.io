@@ -77,6 +77,51 @@ link4.click(function (event) {
     $('.display-4').text("EP Repeatability Data Analysis")
     cleanup();
 })
+const link5 = $('#link5');
+link5.click(function (event) {
+    $('.display-4').text("ConRes Data Analysis")
+    cleanup();
+})
+const link6 = $('#link6');
+link6.click(function (event) {
+    $('.display-4').text("Leakage Data Analysis")
+    cleanup();
+})
+const link7 = $('#link7');
+link7.click(function (event) {
+    $('.display-4').text("Leakage at OT Data Analysis")
+    cleanup();
+})
+const link8 = $('#link8');
+link8.click(function (event) {
+    $('.display-4').text("Cap Data Analysis")
+    cleanup();
+})
+const link9 = $('#link9');
+link9.click(function (event) {
+    $('.display-4').text("Cap Leakage Data Analysis")
+    cleanup();
+})
+const link10 = $('#link10');
+link10.click(function (event) {
+    $('.display-4').text("Cap Leakage at OT Data Analysis")
+    cleanup();
+})
+const link11 = $('#link11');
+link11.click(function (event) {
+    $('.display-4').text("Resistance Data Analysis")
+    cleanup();
+})
+const link12 = $('#link12');
+link12.click(function (event) {
+    $('.display-4').text("Array Force Data Analysis")
+    cleanup();
+})
+const link13 = $('#link13');
+link13.click(function (event) {
+    $('.display-4').text("Lateral Movement Data Analysis")
+    cleanup();
+})
 const fileSelector = $('#inputFile');
 fileSelector.change(function (event) {
     if (exists("input_group")) {
