@@ -221,6 +221,24 @@ function add_input_group() {
             setTimeout(() => { ep(); }, 1000);
         } else if ($('.display-4').text() === "EP Repeatability Data Analysis") {
             setTimeout(() => { ep2(); }, 1000);
+        } else if ($('.display-4').text() === "ConRes Data Analysis") {
+            setTimeout(() => { cr(); }, 1000);
+        } else if ($('.display-4').text() === "Leakage Data Analysis") {
+            setTimeout(() => { leak(); }, 1000);
+        } else if ($('.display-4').text() === "Leakage at OT Data Analysis") {
+            setTimeout(() => { leakatOt(); }, 1000);
+        } else if ($('.display-4').text() === "Cap Data Analysis") {
+            setTimeout(() => { cap(); }, 1000);
+        } else if ($('.display-4').text() === "Cap Leakage Data Analysis") {
+            setTimeout(() => { capleak(); }, 1000);
+        } else if ($('.display-4').text() === "Cap Leakage at OT Data Analysis") {
+            setTimeout(() => { capleakatOt(); }, 1000);
+        } else if ($('.display-4').text() === "Resistance Data Analysis") {
+            setTimeout(() => { resist(); }, 1000);
+        } else if ($('.display-4').text() === "Array Force Data Analysis") {
+            setTimeout(() => { af(); }, 1000);
+        } else if ($('.display-4').text() === "Lateral Movement Data Analysis") {
+            setTimeout(() => { latMov(); }, 1000);
         }
     })
 }
@@ -814,4 +832,49 @@ function ep2() {
     $('#progress_div').remove();
 
     showResult(generateThEp, generateItemEp);
+}
+function cr() {
+    console.log("Initiating MODE CR");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function leak() {
+    console.log("Initiating MODE LEAK");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function leakatOt() {
+    console.log("Initiating MODE LEAKATOT");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function cap() {
+    console.log("Initiating MODE CAP");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function capleak() {
+    console.log("Initiating MODE CAPLEAK");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function capleakatOt() {
+    console.log("Initiating MODE CAPLEAKATOT");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function resist() {
+    console.log("Initiating MODE RESIST");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function af() {
+    console.log("Initiating MODE AF");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+}
+function latMov() {
+    console.log("Initiating MODE LATMOV");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
 }
