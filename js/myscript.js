@@ -242,9 +242,9 @@ function add_input_group() {
         }
     })
 }
-// window.onerror = function() {
-//     errorHandler();
-// };
+window.onerror = function() {
+    errorHandler();
+};
 function errorHandler(){
     window.location.replace("error.html");
 }
@@ -402,6 +402,7 @@ function getSdCr(df, completeProbes) {
 function getSdLeak(df, completeProbes) {
     var asd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [A]')).rename('aggregation', 'Mean [A] Standard Deviation');
     asd = asd.filter(row => completeProbes.includes(row.get('Result ID')));
+    console.log(asd)
     var a = getMean(asd, 'Mean [A] Standard Deviation');
     var resDf = new DataFrame([[a]], ['Mean [A] Standard Deviation']);
     return resDf;
