@@ -79,27 +79,27 @@ link4.click(function (event) {
 })
 const link5 = $('#link5');
 link5.click(function (event) {
-    $('.display-4').text("ConRes Data Analysis")
+    $('.display-4').text("Contact Resistance Reproducibility Data Analysis")
     cleanup();
 })
 const link6 = $('#link6');
 link6.click(function (event) {
-    $('.display-4').text("Leakage Data Analysis")
+    $('.display-4').text("Contact Resistance Repeatability Data Analysis")
     cleanup();
 })
 const link7 = $('#link7');
 link7.click(function (event) {
-    $('.display-4').text("Leakage at OT Data Analysis")
+    $('.display-4').text("I/O Leakage Reproducibility Data Analysis")
     cleanup();
 })
 const link8 = $('#link8');
 link8.click(function (event) {
-    $('.display-4').text("Cap Data Analysis")
+    $('.display-4').text("I/O Leakage Repeatability Data Analysis")
     cleanup();
 })
 const link9 = $('#link9');
 link9.click(function (event) {
-    $('.display-4').text("Cap Leakage Data Analysis")
+    $('.display-4').text("I/O Leakage @OT Repeatability Data Analysis")
     cleanup();
 })
 const link10 = $('#link10');
@@ -221,16 +221,16 @@ function add_input_group() {
             setTimeout(() => { ep(); }, 1000);
         } else if ($('.display-4').text() === "EP Repeatability Data Analysis") {
             setTimeout(() => { ep2(); }, 1000);
-        } else if ($('.display-4').text() === "ConRes Data Analysis") {
-            setTimeout(() => { cr(); }, 1000);
-        } else if ($('.display-4').text() === "Leakage Data Analysis") {
-            setTimeout(() => { leak(); }, 1000);
-        } else if ($('.display-4').text() === "Leakage at OT Data Analysis") {
-            setTimeout(() => { leakatOt(); }, 1000);
-        } else if ($('.display-4').text() === "Cap Data Analysis") {
-            setTimeout(() => { cap(); }, 1000);
-        } else if ($('.display-4').text() === "Cap Leakage Data Analysis") {
-            setTimeout(() => { capleak(); }, 1000);
+        } else if ($('.display-4').text() === "Contact Resistance Reproducibility Data Analysis") {
+            setTimeout(() => { cr1(); }, 1000);
+        } else if ($('.display-4').text() === "Contact Resistance Repeatability Data Analysis") {
+            setTimeout(() => { cr2(); }, 1000);
+        } else if ($('.display-4').text() === "I/O Leakage Reproducibility Data Analysis") {
+            setTimeout(() => { leak1(); }, 1000);
+        } else if ($('.display-4').text() === "I/O Leakage Repeatability Data Analysis") {
+            setTimeout(() => { leak2(); }, 1000);
+        } else if ($('.display-4').text() === "I/O Leakage @OT Repeatability Data Analysis") {
+            setTimeout(() => { leak3(); }, 1000);
         } else if ($('.display-4').text() === "Cap Leakage at OT Data Analysis") {
             setTimeout(() => { capleakatOt(); }, 1000);
         } else if ($('.display-4').text() === "Resistance Data Analysis") {
@@ -242,9 +242,9 @@ function add_input_group() {
         }
     })
 }
-window.onerror = function() {
-    errorHandler();
-};
+// window.onerror = function() {
+//     errorHandler();
+// };
 function errorHandler(){
     window.location.replace("error.html");
 }
@@ -385,21 +385,31 @@ function getSd2(df, completeProbes) {
     return resDf;
 }
 function getSdEp(df, completeProbes) { // nCount.filter(row => row.get('nrows') == k);
-    fhsd = df.groupBy('Probe Id').aggregate(group => group.stat.sd('Final Height Norm')).rename('aggregation', 'Final Height Norm Standard Deviation');
+    var fhsd = df.groupBy('Probe Id').aggregate(group => group.stat.sd('Final Height Norm')).rename('aggregation', 'Final Height Norm Standard Deviation');
     fhsd = fhsd.filter(row => completeProbes.includes(row.get('Probe Id')));
     var a = getMean(fhsd, 'Final Height Norm Standard Deviation');
     var resDf = new DataFrame([[a]], ['Final Height Norm Standard Deviation']);
     return resDf;
 }
-function nRowFilterEp(df, k) {
-    var nCount = df.groupBy('Probe Id').aggregate(group => group.count()).rename('aggregation', 'nrows');
-    var probeswithk =  nCount.filter(row => row.get('nrows') == k);
-    return [].concat.apply([], probeswithk.select('Probe Id').toArray());
+function getSdCr(df, completeProbes) {
+    var ohmsd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [Ohm]')).rename('aggregation', 'Mean [Ohm] Standard Deviation');
+    ohmsd = ohmsd.filter(row => completeProbes.includes(row.get('Result ID')));
+    ohmsd = ohmsd.filter(row => row.get('Mean [Ohm] Standard Deviation') < 1);
+    var a = getMean(ohmsd, 'Mean [Ohm] Standard Deviation');
+    var resDf = new DataFrame([[a]], ['Mean [Ohm] Standard Deviation']);
+    return resDf;
 }
-function nRowFilterOa(df, k) {
-    var nCount = df.groupBy('Probe ID').aggregate(group => group.count()).rename('aggregation', 'nrows');
+function getSdLeak(df, completeProbes) {
+    var asd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [A]')).rename('aggregation', 'Mean [A] Standard Deviation');
+    asd = asd.filter(row => completeProbes.includes(row.get('Result ID')));
+    var a = getMean(asd, 'Mean [A] Standard Deviation');
+    var resDf = new DataFrame([[a]], ['Mean [A] Standard Deviation']);
+    return resDf;
+}
+function nRowFilter(df, k, col) {
+    var nCount = df.groupBy(col).aggregate(group => group.count()).rename('aggregation', 'nrows');
     var probeswithk =  nCount.filter(row => row.get('nrows') == k);
-    return [].concat.apply([], probeswithk.select('Probe ID').toArray());
+    return [].concat.apply([], probeswithk.select(col).toArray());
 }
 function getPtNum(mean, constant) {
     return mean * 6 / constant;
@@ -539,6 +549,51 @@ function getStatusEp(pt) {
         console.log("PASS");
     }
 }
+function getStatusCr(pt) {
+    if (pt >= 0.3){
+        status = "FAIL";
+        console.log("FAIL");
+    } else if (pt >= 0.15) {
+        status = "RUN REPEATABILITY AGAIN";
+        console.log("RUN REPEATABILITY AGAIN");
+    } else {
+        status = "PASS";
+        console.log("PASS");
+    }
+}
+function getStatusCr2(pt) {
+    if (pt >= 0.15){
+        status = "FAIL";
+        console.log("FAIL");
+    } else {
+        status = "PASS";
+        console.log("PASS");
+    }
+}
+function getStatusLeak(ptResult1, ptResult2) {
+    if (ptResult1 >= 0.3 && ptResult2 >= 0.3) {
+        status = "FAIL";
+        console.log("FAIL");
+    } else if (ptResult1 >= 0.3){
+        status = "FAIL";
+        console.log("FAIL");
+    } else if (ptResult2 >= 0.3) {
+        status = "FAIL";
+        console.log("FAIL");
+    } else if (ptResult1 >= 0.15 && ptResult2 >= 0.15) {
+        status = "RUN REPEATABILITY AGAIN";
+        console.log("RUN REPEATABILITY AGAIN");
+    } else if (ptResult1 >= 0.15) {
+        status = "RUN REPEATABILITY AGAIN";
+        console.log("RUN REPEATABILITY AGAIN");
+    } else if (ptResult2 >= 0.15) {
+        status = "RUN REPEATABILITY AGAIN";
+        console.log("RUN REPEATABILITY AGAIN");
+    } else {
+        status = "PASS";
+        console.log("PASS");
+    }
+}
 function generateThOa() {
     addHeader("Offset X (P/T)");
     addHeader("Offset Y (P/T)");
@@ -562,6 +617,20 @@ function generateThEp(){
 }
 function generateItemEp() {
     addItem(pt);
+}
+function generateThCr(){
+    addHeader("Mean [Ohm] (P/T)");
+}
+function generateItemCr() {
+    addItem(pt);
+}
+function generateThLeak(){
+    addHeader("Test Head 1 Mean [A] (P/T)");
+    addHeader("Test Head 2 Mean [A] (P/T)");
+}
+function generateItemLeak() {
+    addItem(pt);
+    addItem(pt2);
 }
 function showResult(headFunc, itemFunc) {
     $("#input_group").remove();
@@ -698,8 +767,8 @@ function oa1() {
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset 100
 
     console.log("Filtering Rows without Complete Ks...");
-    completeProbes = nRowFilterOa(my_df, getInput2()); // get list of probe ids with complete Ks
-    completeProbes2 = nRowFilterOa(my_df2, getInput2());
+    completeProbes = nRowFilter(my_df, getInput2(), 'Probe ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Probe ID');
 
     console.log("Calculating Standard Deviation...");
     sd_df = getSd(my_df, completeProbes);
@@ -742,8 +811,8 @@ function oa2() {
     my_df = my_df.withColumn('Rad Offset', radOffsetHelper); // Generate new Collumn for Rad Offset
 
     console.log("Filtering Rows without Complete Ks...");
-    completeProbes = nRowFilterOa(my_df, getInput2()); // get list of probe ids with complete Ks
-    completeProbes2 = nRowFilterOa(my_df2, getInput2());
+    completeProbes = nRowFilter(my_df, getInput2(), 'Probe ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Probe ID');
 
     console.log("Calculating Mean and Standard Deviation...");
     sd_df = getSd(my_df, completeProbes);
@@ -781,7 +850,7 @@ function ep() {
     my_df = my_df.withColumn('Final Height Norm', heightNormHelper); // Generate new Collumn for Norm
 
     console.log("Filtering Rows without Complete Ks...");
-    completeProbes = nRowFilterEp(my_df, getInput2()); // get list of probe ids with complete Ks
+    completeProbes = nRowFilter(my_df, getInput2(), 'Probe Id'); // get list of probe ids with complete Ks
 
     console.log("Calculating Mean and Standard Deviation...");
     my_df = getSdEp(my_df, completeProbes); // get mean of sd of final height
@@ -817,7 +886,7 @@ function ep2() {
     my_df = my_df.withColumn('Final Height Norm', heightNormHelper); // Generate new Collumn for Norm
 
     console.log("Filtering Rows without Complete Ks...");
-    completeProbes = nRowFilterEp(my_df, getInput2()); // get list of probe ids with complete Ks
+    completeProbes = nRowFilter(my_df, getInput2(), 'Probe Id'); // get list of probe ids with complete Ks
 
     console.log("Calculating Mean and Standard Deviation...");
     my_df = getSdEp(my_df, completeProbes); // get mean of sd of final height
@@ -833,20 +902,145 @@ function ep2() {
 
     showResult(generateThEp, generateItemEp);
 }
-function cr() {
-    console.log("Initiating MODE CR");
+function cr1() {
+    console.log("Initiating MODE CR1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Reproducibility run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility run'); // filter last 10 Reproducibility Run
+
+    console.log("Filtering Rows without Complete Ks...");
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdCr(my_df, completeProbes); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0], 12);
+
+    console.log("Evaluating Status...");
+    getStatusCr(pt);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThCr, generateItemCr);
 }
-function leak() {
-    console.log("Initiating MODE LEAK");
+function cr2() {
+    console.log("Initiating MODE CR2");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    console.log("Filtering Rows without Complete Ks...");
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdCr(my_df, completeProbes); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0], 12);
+
+    console.log("Evaluating Status...");
+    getStatusCr2(pt);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThCr, generateItemCr);
 }
-function leakatOt() {
-    console.log("Initiating MODE LEAKATOT");
+function leak1() {
+    console.log("Initiating MODE LEAK1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Reproducibility run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Reproducibility run'); // filter last 10 Reproducibility Run
+
+    my_df2 = my_df.filter(row => row.get('Test head') == 2);
+    my_df = my_df.filter(row => row.get('Test head') == 1);
+
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdLeak(my_df, completeProbes); // get mean of sd of final height
+    my_df2 = getSdLeak(my_df2, completeProbes2); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0], 0.00000001);
+    pt2 = getPtNum(my_df2.toArray()[0], 0.00000001);
+
+    console.log("Evaluating Status...");
+    getStatusLeak(pt, pt2);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThLeak, generateItemLeak);
+}
+function leak2() {
+    console.log("Initiating MODE LEAK2");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    my_df2 = my_df.filter(row => row.get('Test head') == 2);
+    my_df = my_df.filter(row => row.get('Test head') == 1);
+
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdLeak(my_df, completeProbes); // get mean of sd of final height
+    my_df2 = getSdLeak(my_df2, completeProbes2); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0], 0.00000001);
+    pt2 = getPtNum(my_df2.toArray()[0], 0.00000001);
+
+    console.log("Evaluating Status...");
+    getStatusLeak(pt, pt2);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThLeak, generateItemLeak);
+}
+function leak3() {
+    console.log("Initiating MODE LEAK3");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    my_df2 = my_df.filter(row => row.get('Test head') == 2);
+    my_df = my_df.filter(row => row.get('Test head') == 1);
+
+    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+
+    console.log("Calculating Mean and Standard Deviation...");
+    my_df = getSdLeak(my_df, completeProbes); // get mean of sd of final height
+    my_df2 = getSdLeak(my_df2, completeProbes2); // get mean of sd of final height
+
+    console.log("Calculating P/T...");
+    pt = getPtNum(my_df.toArray()[0], 0.00000001);
+    pt2 = getPtNum(my_df2.toArray()[0], 0.00000001);
+
+    console.log("Evaluating Status...");
+    getStatusLeak(pt, pt2);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThLeak, generateItemLeak);
 }
 function cap() {
     console.log("Initiating MODE CAP");
