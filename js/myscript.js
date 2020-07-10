@@ -17,9 +17,13 @@ var status;
 var fail = [];
 var fail2 = [];
 var rerun = [];
+var rerun2 = [];
 var success = [];
 
 function cleanup() {
+    if (exists("pvTable")) {
+        $("#pvTable").remove();
+    }
     if (exists("list_div")) {
         $("#list_div").remove();
     }
@@ -251,9 +255,9 @@ function add_input_group() {
         }
     })
 }
-window.onerror = function() {
-    errorHandler();
-};
+// window.onerror = function() {
+//     errorHandler();
+// };
 function errorHandler(){
     window.location.replace("error.html");
 }
@@ -403,7 +407,7 @@ function getSdEp(df, completeProbes) { // nCount.filter(row => row.get('nrows') 
 function getSdCr(df, completeProbes) {
     var ohmsd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [Ohm]')).rename('aggregation', 'Mean [Ohm] Standard Deviation');
     ohmsd = ohmsd.filter(row => completeProbes.includes(row.get('Result ID')));
-    ohmsd = ohmsd.filter(row => row.get('Mean [Ohm] Standard Deviation') < 1);
+    ohmsd = ohmsd.filter(row => row.get('Mean [Ohm] Standard Deviation') < 100);
     var a = getMean(ohmsd, 'Mean [Ohm] Standard Deviation');
     var resDf = new DataFrame([[a]], ['Mean [Ohm] Standard Deviation']);
     return resDf;
@@ -490,6 +494,18 @@ function getRerun(arr){
         }
     });
 }
+function getRerun2(arr){
+    console.log("The following items needs rerun: ")
+    rerun2.forEach((item, i) => {
+        if (item === 0){
+            console.log("Size X (P/T)");
+        }else if (item === 1) {
+            console.log("Size Y (P/T)");
+        }else {
+            console.log("Pos R (P/T)");
+        }
+    });
+}
 function getStatusOa(ptResult1, ptResult2) {
     for (var i = 0; i < 4; i++) {
         if (ptResult1[i] >= 0.3){
@@ -501,8 +517,10 @@ function getStatusOa(ptResult1, ptResult2) {
         }
     }
     for (var i = 0; i < 3; i++) {
-        if (ptResult2[i] >= 0.30){
+        if (ptResult1[i] >= 0.3){
             fail2.push(i);
+        }else if (ptResult2[i] >= 0.15){
+            rerun2.push(i);
         }else{
             success.push(i);
         }
@@ -519,6 +537,10 @@ function getStatusOa(ptResult1, ptResult2) {
         status = "RUN REPEATABILITY AGAIN";
         console.log("RUN REPEATABILITY AGAIN");
         getRerun(rerun);
+    } else if (rerun2.length > 0) {
+        status = "RUN REPEATABILITY AGAIN";
+        console.log("RUN REPEATABILITY AGAIN");
+        getRerun2(rerun2);
     } else {
         status = "PASS";
         console.log("PASS");
@@ -556,7 +578,10 @@ function getStatusEp(pt) {
     if (pt > 0.3) {
         status = "FAIL";
         console.log("FAIL");
-    }else {
+    } else if (pt > 0.15) {
+        status = "RUN REPEATABILITY AGAIN";
+        console.log("RUN REPEATABILITY AGAIN");
+    } else {
         status = "PASS";
         console.log("PASS");
     }
@@ -768,6 +793,16 @@ function generatererunListOA() {
             addItemListDiv("Rad Offset");
         }
     });
+    rerun2.forEach((item, i) => {
+        if (item === 0) {
+            addItemListDiv("Size X");
+        }else if (item === 1) {
+            addItemListDiv("Size Y");
+        }else {
+            addItemListDiv("Pos R");
+        }
+    });
+
 }
 function oa1() {
     console.log("Initiating MODE OA1");
@@ -1068,16 +1103,13 @@ function leak3() {
 
     showResult(generateThLeak, generateItemLeak);
 }
-function custom(df, completeProbes) {
+function custom(df) {
     var msd = df.groupBy('Result ID').aggregate(group => group.stat.sd('Mean [F]')).rename('aggregation', 'Mean [F] Standard Deviation');
     msd = msd.filter(row => completeProbes.includes(row.get('Result ID')));
     var emean = df.groupBy('Result ID').aggregate(group => group.stat.mean('Expected value')).rename('aggregation', 'Expected Value Mean');
     emean = emean.filter(row => completeProbes.includes(row.get('Result ID')));
     var resDf = [msd, emean]
     return resDf;
-}
-function vconst(ev) {
-
 }
 function cap() {
     console.log("Initiating MODE CAP");
@@ -1087,17 +1119,58 @@ function cap() {
     console.log("Filtering last " + getInput2() + " Repeatability run...");
     my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
 
-    my_df2 = my_df.filter(row => row.get('Test head') == 2);
-    my_df = my_df.filter(row => row.get('Test head') == 1);
+    var msd = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.sd('Mean [F]')).rename('aggregation', 'Mean [F] Standard Deviation');
+    var emean = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.mean('Expected value')).rename('aggregation', 'Expected Value Mean');
+    emean = [].concat.apply([], emean.select('Expected Value Mean').toArray());
+    function emeanHelper() {
+        var res = counter;
+        counter = counter + 1;
+        return emean[res];
+    }
+    my_df = msd.withColumn('Expected Value Mean', emeanHelper); counter = 0;
 
-    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
-    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    my_df = my_df.withColumn('V', (row) => row.get('Expected Value Mean') * 0.4)
 
-    th1 = custom(my_df, completeProbes);
-    th2 = custom(my_df2, completeProbes2);
+    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [F] Standard Deviation') / row.get('V'))
 
-    my_df = th1[1].withColumn('v', (row) => row.get('Expected Value Mean') * 0.4).withColumn('v', (row) => row.get('v'));
-    my_df2 = th2[1].withColumn('v', (row) => row.get('Expected Value Mean') * 0.4).withColumn('v', (row) => row.get('v'));
+    function statusHelper(row) {
+        if (Number(row.get('P/V Ratio')) >= 0.15){
+            return 'FAIL';
+        } else{
+            return 'PASS';
+        }
+    }
+
+    my_df = my_df.withColumn('Status', statusHelper);
+
+    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'Status');
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    getTable(my_df.toArray());
+}
+function getTable(table) {
+    $('<table/>', {class: 'table table-dark', id: 'pvTable'}).appendTo('.main');
+    $('<thead/>', {id: 'tableHead'}).appendTo('#pvTable');
+    $('<tbody/>', {id: 'tableBody'}).appendTo('#pvTable');
+    $('<tr/>', {id: 'headRow'}).appendTo('#tableHead');
+    $('<th/>', {scope: 'col', text: 'Test Head'}).appendTo('#headRow');
+    $('<th/>', {scope: 'col', text: 'Result ID'}).appendTo('#headRow');
+    $('<th/>', {scope: 'col', text: 'P/V Ratio'}).appendTo('#headRow');
+    $('<th/>', {scope: 'col', text: 'Status'}).appendTo('#headRow');
+
+    function addtobody(testhead, resid, pv, status, i) {
+        $('<tr/>', {id: 'bodyRow' + i}).appendTo('#tableBody');
+        $('<td/>', {text: testhead}).appendTo('#bodyRow'+i);
+        $('<td/>', {text: resid}).appendTo('#bodyRow'+i);
+        $('<td/>', {text: pv}).appendTo('#bodyRow'+i);
+        $('<td/>', {text: status}).appendTo('#bodyRow'+i);
+    }
+
+    table.forEach((item, i) => {
+        addtobody(item[0], item[1], item[2], item[3], i);
+    });
 
 }
 function capleak() {
@@ -1107,11 +1180,6 @@ function capleak() {
 }
 function capleakatOt() {
     console.log("Initiating MODE CAPLEAKATOT");
-    console.log("Creating DataFrame...");
-    my_df = getDf(results, getInput1()); // create DataFrame
-}
-function resist() {
-    console.log("Initiating MODE RESIST");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
 }
