@@ -110,17 +110,17 @@ link9.click(function (event) {
 })
 const link10 = $('#link10');
 link10.click(function (event) {
-    $('.display-4').text("Capacity Repeatability Data Analysis")
+    $('.display-4').text("Capacitor Repeatability Data Analysis")
     cleanup();
 })
 const link11 = $('#link11');
 link11.click(function (event) {
-    $('.display-4').text("Capacity Data Analysis")
+    $('.display-4').text("Capacitor Leakage Data Analysis")
     cleanup();
 })
 const link12 = $('#link12');
 link12.click(function (event) {
-    $('.display-4').text("Capacity Data Analysis")
+    $('.display-4').text("Capacitor Leakage @ OT Data Analysis")
     cleanup();
 })
 const link13 = $('#link13');
@@ -131,6 +131,11 @@ link13.click(function (event) {
 const link14 = $('#link14');
 link14.click(function (event) {
     $('.display-4').text("Lateral Movement Data Analysis")
+    cleanup();
+})
+const link15 = $('#link15');
+link15.click(function (event) {
+    $('.display-4').text("Array Force Data Analysis")
     cleanup();
 })
 const fileSelector = $('#inputFile');
@@ -200,7 +205,6 @@ function add_input_group() {
     input_box1.setAttribute('type', 'text');
     input_box1.setAttribute('class', 'form-control');
     input_box1.setAttribute('id', 'input_box1');
-    input_box1.setAttribute('placeholder', 'Lines to Remove');
     var input_box2 = document.createElement("input");
     input_box2.setAttribute('type', 'text');
     input_box2.setAttribute('class', 'form-control');
@@ -242,22 +246,24 @@ function add_input_group() {
             setTimeout(() => { leak2(); }, 1000);
         } else if ($('.display-4').text() === "I/O Leakage @OT Repeatability Data Analysis") {
             setTimeout(() => { leak3(); }, 1000);
-        } else if ($('.display-4').text() === "Capacity Repeatability Data Analysis") {
+        } else if ($('.display-4').text() === "Capacitor Repeatability Data Analysis") {
             setTimeout(() => { cap(); }, 1000);
-        } else if ($('.display-4').text() === "Resistance Data Analysis") {
-            setTimeout(() => { resist(); }, 1000);
-        } else if ($('.display-4').text() === "Array Force Data Analysis") {
-            setTimeout(() => { af(); }, 1000);
+        } else if ($('.display-4').text() === "Capacitor Leakage Data Analysis") {
+            setTimeout(() => { capleak(); }, 1000);
+        } else if ($('.display-4').text() === "Capacitor Leakage @ OT Data Analysis") {
+            setTimeout(() => { capleakatOt(); }, 1000);
         } else if ($('.display-4').text() === "Resistor Repeatability Data Analysis") {
             setTimeout(() => { res(); }, 1000);
         } else if ($('.display-4').text() === "Lateral Movement Data Analysis") {
             setTimeout(() => { latmov(); }, 1000);
+        } else if ($('.display-4').text() === "Array Force Data Analysis") {
+            setTimeout(() => { af(); }, 1000);
         }
     })
 }
-// window.onerror = function() {
-//     errorHandler();
-// };
+window.onerror = function() {
+    errorHandler();
+};
 function errorHandler(){
     window.location.replace("error.html");
 }
@@ -639,6 +645,12 @@ function generateThOa() {
     addHeader("Size X (P/T)");
     addHeader("Size Y (P/T)");
     addHeader("Pos R (P/T)");
+}
+function generateThAf() {
+    addHeader("Array Force P/V");
+}
+function generateItemAf() {
+    addItem(pt)
 }
 function generateItemOa() {
     addItem(pt[0]);
@@ -1133,6 +1145,8 @@ function cap() {
 
     my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [F] Standard Deviation') / row.get('V'))
 
+    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [F] Standard Deviation') * 6 / row.get('V'))
+
     function statusHelper(row) {
         if (Number(row.get('P/V Ratio')) >= 0.15){
             return 'FAIL';
@@ -1143,7 +1157,7 @@ function cap() {
 
     my_df = my_df.withColumn('Status', statusHelper);
 
-    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'Status');
+    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'P/T Ratio', 'Status');
 
     console.log("Processing Complete!");
     $('#progress_div').remove();
@@ -1158,18 +1172,20 @@ function getTable(table) {
     $('<th/>', {scope: 'col', text: 'Test Head'}).appendTo('#headRow');
     $('<th/>', {scope: 'col', text: 'Result ID'}).appendTo('#headRow');
     $('<th/>', {scope: 'col', text: 'P/V Ratio'}).appendTo('#headRow');
+    $('<th/>', {scope: 'col', text: 'P/T Ratio'}).appendTo('#headRow');
     $('<th/>', {scope: 'col', text: 'Status'}).appendTo('#headRow');
 
-    function addtobody(testhead, resid, pv, status, i) {
+    function addtobody(testhead, resid, pv, pt, status, i) {
         $('<tr/>', {id: 'bodyRow' + i}).appendTo('#tableBody');
         $('<td/>', {text: testhead}).appendTo('#bodyRow'+i);
         $('<td/>', {text: resid}).appendTo('#bodyRow'+i);
         $('<td/>', {text: pv}).appendTo('#bodyRow'+i);
+        $('<td/>', {text: pt}).appendTo('#bodyRow'+i);
         $('<td/>', {text: status}).appendTo('#bodyRow'+i);
     }
 
     table.forEach((item, i) => {
-        addtobody(item[0], item[1], item[2], item[3], i);
+        addtobody(item[0], item[1], item[2], item[3], item[4], i);
     });
 
 }
@@ -1177,11 +1193,116 @@ function capleak() {
     console.log("Initiating MODE CAPLEAK");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    var msd = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.sd('Mean [A]')).rename('aggregation', 'Mean [A] Standard Deviation');
+    var emean = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.mean('Expected value')).rename('aggregation', 'Expected Value Mean');
+    emean = [].concat.apply([], emean.select('Expected Value Mean').toArray());
+    function emeanHelper() {
+        var res = counter;
+        counter = counter + 1;
+        return emean[res];
+    }
+    my_df = msd.withColumn('Expected Value Mean', emeanHelper); counter = 0;
+
+    function getv(row) {
+        if (row.get('Expected Value Mean') < 0.00005) {
+            return 0.0000001;
+        } else if (row.get('Expected Value Mean') >= 0.00005 && row.get('Expected Value Mean') < 0.00015) {
+            return 0.0000002;
+        } else if (row.get('Expected Value Mean') >= 0.00015 && row.get('Expected Value Mean') < 0.00025) {
+            return 0.0000003;
+        } else if (row.get('Expected Value Mean') >= 0.00025 && row.get('Expected Value Mean') < 0.00035) {
+            return 0.0000004;
+        } else if (row.get('Expected Value Mean') >= 0.00035 && row.get('Expected Value Mean') < 0.0005) {
+            return 0.0000005;
+        } else {
+            return 0.00001;
+        }
+    }
+
+    my_df = my_df.withColumn('V', getv)
+
+    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [A] Standard Deviation') / row.get('V'))
+
+    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
+
+    function statusHelper(row) {
+        if (Number(row.get('P/V Ratio')) >= 0.15){
+            return 'FAIL';
+        } else{
+            return 'PASS';
+        }
+    }
+
+    my_df = my_df.withColumn('Status', statusHelper);
+
+    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'P/T Ratio', 'Status');
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    getTable(my_df.toArray());
 }
 function capleakatOt() {
-    console.log("Initiating MODE CAPLEAKATOT");
+    console.log("Initiating MODE CAPLEAK@OT");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    var msd = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.sd('Mean [A]')).rename('aggregation', 'Mean [A] Standard Deviation');
+    var emean = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.mean('Expected value')).rename('aggregation', 'Expected Value Mean');
+    emean = [].concat.apply([], emean.select('Expected Value Mean').toArray());
+    function emeanHelper() {
+        var res = counter;
+        counter = counter + 1;
+        return emean[res];
+    }
+    my_df = msd.withColumn('Expected Value Mean', emeanHelper); counter = 0;
+
+    function getv(row) {
+        if (row.get('Expected Value Mean') < 0.00005) {
+            return 0.0000001;
+        } else if (row.get('Expected Value Mean') >= 0.00005 && row.get('Expected Value Mean') < 0.00015) {
+            return 0.0000002;
+        } else if (row.get('Expected Value Mean') >= 0.00015 && row.get('Expected Value Mean') < 0.00025) {
+            return 0.0000003;
+        } else if (row.get('Expected Value Mean') >= 0.00025 && row.get('Expected Value Mean') < 0.00035) {
+            return 0.0000004;
+        } else if (row.get('Expected Value Mean') >= 0.00035 && row.get('Expected Value Mean') < 0.0005) {
+            return 0.0000005;
+        } else {
+            return 0.00001;
+        }
+    }
+
+    my_df = my_df.withColumn('V', getv)
+
+    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [A] Standard Deviation') / row.get('V'))
+
+    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
+
+
+    function statusHelper(row) {
+        if (Number(row.get('P/V Ratio')) >= 0.15){
+            return 'FAIL';
+        } else{
+            return 'PASS';
+        }
+    }
+
+    my_df = my_df.withColumn('Status', statusHelper);
+
+    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'P/T Ratio', 'Status');
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    getTable(my_df.toArray());
 }
 function getSdres(df, completeProbes) {
     var ohmsd = df.stat.sd('Mean [Ohm]');
@@ -1245,12 +1366,40 @@ function latmov() {
 
     showResult(generateThlat, generateItemlat);
 }
+function af() {
+    console.log("Initiating MODE LATMOV");
+    console.log("Creating DataFrame...");
+    my_df = getDf(results, getInput1()); // create DataFrame
+
+    console.log("Filtering last " + getInput2() + " Repeatability run...");
+    my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
+
+    my_df = my_df.stat.sd('Force average [N]');
+
+    pt = my_df / 55.5;
+
+    getstatusaf(pt);
+
+    console.log("Processing Complete!");
+    $('#progress_div').remove();
+
+    showResult(generateThAf, generateItemAf);
+}
 function getSdlatmov() {
     var lmsd = df.groupBy('Probe ID').aggregate(group => group.stat.sd('Lateral movemment [mm]')).rename('aggregation', 'Lateral Movement [mm] Standard Deviation');
     lmsd = lmsd.filter(row => completeProbes.includes(row.get('Probe ID')));
     var a = getMean(lmsd, 'Lateral Movement [mm] Standard Deviation');
     var resDf = new DataFrame([[a]], ['Lateral Movement [mm] Standard Deviation']);
     return resDf;
+}
+function getstatusaf(pt) {
+    if (pt >= 0.1) {
+        status = "FAIL";
+        console.log("FAIL");
+    } else {
+        status = "PASS";
+        console.log("PASS");
+    }
 }
 function getStatuslat(pt) {
     if (pt >= 0.15){
