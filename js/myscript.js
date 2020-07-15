@@ -295,9 +295,9 @@ function add_input_group() {
         }
     })
 }
-// window.onerror = function() {
-//     errorHandler();
-// };
+window.onerror = function() {
+    errorHandler();
+};
 
 function errorHandler() {
     window.location.replace("error.html");
