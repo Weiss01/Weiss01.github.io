@@ -11,6 +11,7 @@ var sd_df;
 var sd_df2;
 var pt;
 var pt2;
+var variance;
 var th1;
 var th2;
 var status;
@@ -736,10 +737,12 @@ function generateThOa() {
 
 function generateThAf() {
     addHeader("Array Force P/V");
+    addHeader("variance")
 }
 
 function generateItemAf() {
     addItem(pt)
+    addItem(variance.toNumber())
 }
 
 function generateItemOa() {
@@ -1534,7 +1537,9 @@ function af() {
     console.log("Filtering last " + getInput2() + " Repeatability run...");
     my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
 
-    my_df = my_df.stat.sd('Force average [N]');
+    forceMean = new BigNumber(my_df.stat.mean('Force average [N]'));
+    my_df = new BigNumber(my_df.stat.sd('Force average [N]'));
+    variance = my_df.times(my_df).div(forceMean);
 
     pt = my_df / 55.5;
 
