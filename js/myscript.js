@@ -853,7 +853,7 @@ function addListDiv() {
     var list_div = document.createElement('div');
     list_div.setAttribute('class', 'container');
     list_div.setAttribute('id', 'list_div');
-    var bp = document.createElement('br')
+    var bp = document.createElement('br');
     bp.setAttribute('id', 'list_bp');
     var list_alert = document.createElement('div');
     list_alert.setAttribute('class', 'alert alert-warning listbox');
@@ -1267,8 +1267,6 @@ function cap() {
 
     my_df = my_df.withColumn('V', (row) => row.get('Expected Value Mean') * 0.4)
 
-    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [F] Standard Deviation') / row.get('V'))
-
     my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [F] Standard Deviation') * 6 / row.get('V'))
 
     function statusHelper(row) {
@@ -1281,7 +1279,7 @@ function cap() {
 
     my_df = my_df.withColumn('Status', statusHelper);
 
-    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'P/T Ratio', 'Status');
+    my_df = my_df.select('Test head', 'Result ID', 'P/T Ratio', 'Status');
 
     console.log("Processing Complete!");
     $('#progress_div').remove();
@@ -1389,8 +1387,6 @@ function capleak() {
 
     my_df = my_df.withColumn('V', getv)
 
-    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [A] Standard Deviation') / row.get('V'))
-
     my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
 
     function statusHelper(row) {
@@ -1403,7 +1399,7 @@ function capleak() {
 
     my_df = my_df.withColumn('Status', statusHelper);
 
-    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'P/T Ratio', 'Status');
+    my_df = my_df.select('Test head', 'Result ID', 'P/T Ratio', 'Status');
 
     console.log("Processing Complete!");
     $('#progress_div').remove();
@@ -1449,8 +1445,6 @@ function capleakatOt() {
 
     my_df = my_df.withColumn('V', getv)
 
-    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [A] Standard Deviation') / row.get('V'))
-
     my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
 
 
@@ -1464,7 +1458,7 @@ function capleakatOt() {
 
     my_df = my_df.withColumn('Status', statusHelper);
 
-    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'P/T Ratio', 'Status');
+    my_df = my_df.select('Test head', 'Result ID', 'P/T Ratio', 'Status');
 
     console.log("Processing Complete!");
     $('#progress_div').remove();
