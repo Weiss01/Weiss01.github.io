@@ -295,9 +295,9 @@ function add_input_group() {
         }
     })
 }
-window.onerror = function() {
-    errorHandler();
-};
+// window.onerror = function() {
+//     errorHandler();
+// };
 
 function errorHandler() {
     window.location.replace("error.html");
@@ -1270,7 +1270,7 @@ function cap() {
     my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [F] Standard Deviation') * 6 / row.get('V'))
 
     function statusHelper(row) {
-        if (Number(row.get('P/V Ratio')) >= 0.15) {
+        if (Number(row.get('P/T Ratio')) >= 0.15) {
             return 'FAIL';
         } else {
             return 'PASS';
@@ -1311,10 +1311,6 @@ function getTable(table) {
     }).appendTo('#headRow');
     $('<th/>', {
         scope: 'col',
-        text: 'P/V Ratio'
-    }).appendTo('#headRow');
-    $('<th/>', {
-        scope: 'col',
         text: 'P/T Ratio'
     }).appendTo('#headRow');
     $('<th/>', {
@@ -1322,7 +1318,7 @@ function getTable(table) {
         text: 'Status'
     }).appendTo('#headRow');
 
-    function addtobody(testhead, resid, pv, pt, status, i) {
+    function addtobody(testhead, resid, pt, status, i) {
         $('<tr/>', {
             id: 'bodyRow' + i
         }).appendTo('#tableBody');
@@ -1333,9 +1329,6 @@ function getTable(table) {
             text: resid
         }).appendTo('#bodyRow' + i);
         $('<td/>', {
-            text: pv
-        }).appendTo('#bodyRow' + i);
-        $('<td/>', {
             text: pt
         }).appendTo('#bodyRow' + i);
         $('<td/>', {
@@ -1344,7 +1337,7 @@ function getTable(table) {
     }
 
     table.forEach((item, i) => {
-        addtobody(item[0], item[1], item[2], item[3], item[4], i);
+        addtobody(item[0], item[1], item[2], item[3], i);
     });
 
 }
@@ -1390,7 +1383,7 @@ function capleak() {
     my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
 
     function statusHelper(row) {
-        if (Number(row.get('P/V Ratio')) >= 0.15) {
+        if (Number(row.get('P/T Ratio')) >= 0.15) {
             return 'FAIL';
         } else {
             return 'PASS';
@@ -1449,7 +1442,7 @@ function capleakatOt() {
 
 
     function statusHelper(row) {
-        if (Number(row.get('P/V Ratio')) >= 0.15) {
+        if (Number(row.get('P/T Ratio')) >= 0.15) {
             return 'FAIL';
         } else {
             return 'PASS';
