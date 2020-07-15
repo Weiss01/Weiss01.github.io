@@ -604,7 +604,7 @@ function getStatusOa(ptResult1, ptResult2) {
         }
     }
     for (var i = 0; i < 3; i++) {
-        if (ptResult1[i] >= 0.3) {
+        if (ptResult2[i] >= 0.3) {
             fail2.push(i);
         } else if (ptResult2[i] >= 0.15) {
             rerun2.push(i);
