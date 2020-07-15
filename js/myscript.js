@@ -21,6 +21,15 @@ var rerun = [];
 var rerun2 = [];
 var success = [];
 
+function reset() {
+    counter = 0;
+    fail = [];
+    fail2 = [];
+    rerun = [];
+    rerun2 = [];
+    success = [];
+}
+
 function cleanup() {
     if (exists("pvTable")) {
         $("#pvTable").remove();
@@ -928,6 +937,7 @@ function generatererunListOA() {
 }
 
 function oa1() {
+    reset();
     console.log("Initiating MODE OA1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame 5
@@ -974,6 +984,7 @@ function oa1() {
 }
 
 function oa2() {
+    reset();
     console.log("Initiating MODE OA2");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1019,6 +1030,7 @@ function oa2() {
 }
 
 function ep() {
+    reset();
     console.log("Initiating MODE EP1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1057,6 +1069,7 @@ function ep() {
 }
 
 function ep2() {
+    reset();
     console.log("Initiating MODE EP2");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1095,6 +1108,7 @@ function ep2() {
 }
 
 function cr1() {
+    reset();
     console.log("Initiating MODE CR1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1121,6 +1135,7 @@ function cr1() {
 }
 
 function cr2() {
+    reset();
     console.log("Initiating MODE CR2");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1147,6 +1162,7 @@ function cr2() {
 }
 
 function leak1() {
+    reset();
     console.log("Initiating MODE LEAK1");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1178,6 +1194,7 @@ function leak1() {
 }
 
 function leak2() {
+    reset();
     console.log("Initiating MODE LEAK2");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1209,6 +1226,7 @@ function leak2() {
 }
 
 function leak3() {
+    reset();
     console.log("Initiating MODE LEAK3");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1249,6 +1267,7 @@ function custom(df) {
 }
 
 function cap() {
+    reset();
     console.log("Initiating MODE CAP");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1346,6 +1365,7 @@ function getTable(table) {
 }
 
 function capleak() {
+    reset();
     console.log("Initiating MODE CAPLEAK");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1404,6 +1424,7 @@ function capleak() {
 }
 
 function capleakatOt() {
+    reset();
     console.log("Initiating MODE CAPLEAK@OT");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1472,6 +1493,7 @@ function getSdres(df, completeProbes) {
 }
 
 function res() {
+    reset();
     console.log("Initiating MODE RES");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1504,6 +1526,7 @@ function res() {
 }
 
 function latmov() {
+    reset();
     console.log("Initiating MODE LATMOV");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
@@ -1530,6 +1553,7 @@ function latmov() {
 }
 
 function af() {
+    reset();
     console.log("Initiating MODE LATMOV");
     console.log("Creating DataFrame...");
     my_df = getDf(results, getInput1()); // create DataFrame
