@@ -7,5 +7,6 @@ This is my first ever attempt at using javascript so the code is bad and alot of
 # Libraries used
 - dataframe-js by Gmousse https://github.com/Gmousse/dataframe-js
 - bignumber-js by Evalir https://github.com/MikeMcl/bignumber.js/
+- papaparse by pschlatt https://github.com/mholt/PapaParse
 
-dataframe-js is kind of like a replica of pandas from python whereas bignumber-js was used to avoid rounding errors.
+dataframe-js is kind of like a replica of pandas from python whereas bignumber-js was used for precise calculations and to avoid rounding errors. Papaparse was also used to convert csv files into string object which is then processed by dataframe-js.
