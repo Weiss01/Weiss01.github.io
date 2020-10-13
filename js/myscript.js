@@ -1501,28 +1501,38 @@ function res() {
     console.log("Filtering last " + getInput2() + " Repeatability run...");
     my_df = filterNewestRun(my_df, getInput2(), 'Repeatability run'); // filter last 10 Repeatability Run
 
-    my_df2 = my_df.filter(row => row.get('Test head') == 2);
-    my_df = my_df.filter(row => row.get('Test head') == 1);
+    var msd = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.sd('Mean [Ohm]')).rename('aggregation', 'Mean [Ohm] Standard Deviation');
+    var emean = my_df.groupBy('Test head', 'Result ID').aggregate(group => group.stat.mean('Expected value')).rename('aggregation', 'Expected Value Mean');
+    emean = [].concat.apply([], emean.select('Expected Value Mean').toArray());
 
-    completeProbes = nRowFilter(my_df, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
-    completeProbes2 = nRowFilter(my_df2, getInput2(), 'Result ID'); // get list of probe ids with complete Ks
+    function emeanHelper() {
+        var res = counter;
+        counter = counter + 1;
+        return emean[res];
+    }
+    my_df = msd.withColumn('Expected Value Mean', emeanHelper);
+    counter = 0;
 
-    console.log("Calculating Mean and Standard Deviation...");
-    my_df = getSdres(my_df, completeProbes); // get mean of sd of final height
-    my_df2 = getSdres(my_df2, completeProbes2); // get mean of sd of final height
+    my_df = my_df.withColumn('V', (row) => row.get('Expected Value Mean') * 0.01)
 
-    console.log("Calculating P/V Ratio...");
-    pt = getPtNum(my_df.toArray()[0][0], my_df.toArray()[0][1] * 0.01);
-    pt2 = getPtNum(my_df2.toArray()[0][0], my_df2.toArray()[0][1] * 0.01);
+    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [Ohm] Standard Deviation') * 6 / row.get('V'))
 
-    console.log("Evaluating Status...");
-    getStatusres(pt, pt2);
+    function statusHelper(row) {
+        if (Number(row.get('P/V Ratio')) >= 0.15) {
+            return 'FAIL';
+        } else {
+            return 'PASS';
+        }
+    }
+
+    my_df = my_df.withColumn('Status', statusHelper);
+
+    my_df = my_df.select('Test head', 'Result ID', 'P/V Ratio', 'Status');
 
     console.log("Processing Complete!");
-
     $('#progress_div').remove();
 
-    showResult(generateThres, generateItemres);
+    getTable(my_df.toArray());
 }
 
 function latmov() {
