@@ -1289,7 +1289,7 @@ function cap() {
 
     my_df = my_df.withColumn('V', (row) => row.get('Expected Value Mean') * 0.4)
 
-    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [F] Standard Deviation') * 6 / row.get('V'))
+    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [F] Standard Deviation') / row.get('V'))
 
     function statusHelper(row) {
         if (Number(row.get('P/T Ratio')) >= 0.15) {
