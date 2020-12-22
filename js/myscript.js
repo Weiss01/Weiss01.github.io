@@ -1403,7 +1403,7 @@ function capleak() {
 
     my_df = my_df.withColumn('V', getv)
 
-    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
+    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') / row.get('V'))
 
     function statusHelper(row) {
         if (Number(row.get('P/T Ratio')) >= 0.15) {
@@ -1462,7 +1462,7 @@ function capleakatOt() {
 
     my_df = my_df.withColumn('V', getv)
 
-    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') * 6 / row.get('V'))
+    my_df = my_df.withColumn('P/T Ratio', (row) => row.get('Mean [A] Standard Deviation') / row.get('V'))
 
 
     function statusHelper(row) {
@@ -1515,7 +1515,7 @@ function res() {
 
     my_df = my_df.withColumn('V', (row) => row.get('Expected Value Mean') * 0.01)
 
-    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [Ohm] Standard Deviation') * 6 / row.get('V'))
+    my_df = my_df.withColumn('P/V Ratio', (row) => row.get('Mean [Ohm] Standard Deviation') / row.get('V'))
 
     function statusHelper(row) {
         if (Number(row.get('P/V Ratio')) >= 0.15) {
