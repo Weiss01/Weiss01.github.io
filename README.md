@@ -1,6 +1,6 @@
 # data-analyser
 
-This data analyser uses dataframe-js to read and analyse a specific format of csv files and show the results and status of the data based on the quality of the data and mode of calculations.
+This data analyser uses dataframe-js to read and analyse a specific format of csv files and show the results and status of the data based on the quality of the data and mode of calculations. Basically a tool customized to fit the requirements of particular machines ANOVA gauge repeatability and reproducibility test. (made for maxsquare engineering sdn. bhd.)
 
 This is my FIRST EVER ATTEMPT at using javascript so the code is super messy and is going to be a nightmare to debug or add features to (but at least it works).
 
